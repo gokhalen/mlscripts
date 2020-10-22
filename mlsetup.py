@@ -8,14 +8,19 @@ from fypy.src.libmesh import FyPyMesh
 
 def getargs():
     parser = argparse.ArgumentParser(description='driver script to generate data for ml')
-    # number of training examples to generate
     parser.add_argument('--ntrain',help='number of training examples to generate',required=False,type=int,default=16)
+    parser.add_argument('--ninc',help='number of inclusions',required=False,type=int,default=1)
+    parser.add_argument('--rmin',help='lower bound on inclusion radius',required=False,type=float,default=0.1)
+    parser.add_argument('--rmax',help='lower bound on inclusion radius',required=False,type=float,default=0.25)
+
+    parser.add_argument('--generate',help='generate input files for training examples',required=False,default='False')
+    parser.add_argument('--solve',help='solve training examples',required=False,default='False')
 
     parser.add_argument('--nelemx',help='number of elements in the x-direction',required=False,type=int,default=16)
     parser.add_argument('--nelemy',help='number of elements in the y-direction',required=False,type=int,default=16)
-        
     parser.add_argument('--length',help='length of the domain in y direction',required=False,type=int,default=2.0)
     parser.add_argument('--breadth',help='length of the domain in x direction',required=False,type=int,default=5.0)
+    
     args = parser.parse_args()
     return args
 
@@ -37,46 +42,30 @@ if __name__ == '__main__':
     
     args = getargs()
 
-    dirlist    = []
-    inputlist  = []
-    outputlist = []
-    
+    if ( args.generate == 'True') or ( args.solve == 'True'):
+        for itrain in range(args.ntrain):
+            dirname    = 'traindata'         + str(itrain)+'/'
+            inputname  = f'input'  + str(itrain) + '.json.in'
+            outputname = f'output' + str(itrain) + '.json.out'
 
-    
-    for itrain in range(args.ntrain):
-        dirname    = 'traindata'         + str(itrain)+'/'
-        inputname  = f'input'  + str(itrain) + '.json.in'
-        outputname = f'output' + str(itrain) + '.json.out'
-        
-        dirlist.append(dirname)
-        inputlist.append(inputname)
-        outputlist.append(outputname)
+            if (args.generate =='True'):
+                print(f'Creating training inputfiles for example {itrain+1} of {args.ntrain}')
+                mesh2d = FyPyMesh(inputdir=dirname,outputdir=dirname)
+                os.mkdir(dirname)
+                mesh2d.create_mesh_2d(length=2,breadth=5,nelemx=8,nelemy=8,stf='homogeneous',bctype='trac')
+                mesh2d.json_dump(filename=inputname)
 
-        print(f'Creating training inputfiles for example {itrain+1} of {args.ntrain}')
-        mesh2d = FyPyMesh(inputdir=dirname,outputdir=dirname)
-        os.mkdir(dirname)
-        mesh2d.create_mesh_2d(length=2,breadth=5,nelemx=8,nelemy=8,stf='homogeneous',bctype='trac')
-        mesh2d.json_dump(filename=inputname)
+            if (args.solve =='True'):
 
-
-    # run solver
-    # arguments for fypy
-    for itr,(dirname,ipf,opf) in enumerate(zip(dirlist,inputlist,outputlist)):
-        print(f'Solving example {itr+1} of {args.ntrain}')
-        fypyargs = FyPyArgs(
-                            inputfile  = ipf,
-                            outputfile = opf,
-                            inputdir   = dirname,
-                            outputdir  = dirname,
-                            partype    = 'list',
-                            profile    = 'False',
-                            solvertype = 'spsolve'
-                           )
-        fypy = FyPy(fypyargs)
-        fypy.doeverything(str(itr))
-        
-        # fypy.assembly()
-        # fypy.solve()
-        # fypy.output()
-        # fypy.postprocess()
-
+                print(f'Solving example {itrain+1} of {args.ntrain}')
+                fypyargs = FyPyArgs(
+                                    inputfile  = inputname,
+                                    outputfile = outputname,
+                                    inputdir   = dirname,
+                                    outputdir  = dirname,
+                                    partype    = 'list',
+                                    profile    = 'False',
+                                    solvertype = 'spsolve'
+                                   )
+                fypy = FyPy(fypyargs)
+                fypy.doeverything(str(itrain))
