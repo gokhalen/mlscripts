@@ -18,8 +18,8 @@ def getargs():
 
     parser.add_argument('--nelemx',help='number of elements in the x-direction',required=False,type=int,default=16)
     parser.add_argument('--nelemy',help='number of elements in the y-direction',required=False,type=int,default=16)
-    parser.add_argument('--length',help='length of the domain in y direction',required=False,type=int,default=2.0)
-    parser.add_argument('--breadth',help='length of the domain in x direction',required=False,type=int,default=5.0)
+    parser.add_argument('--length',help='length of the domain in x direction',required=False,type=int,default=2.0)
+    parser.add_argument('--breadth',help='length of the domain in y direction',required=False,type=int,default=5.0)
     
     args = parser.parse_args()
     return args
@@ -52,7 +52,16 @@ if __name__ == '__main__':
                 print(f'Creating training inputfiles for example {itrain+1} of {args.ntrain}')
                 mesh2d = FyPyMesh(inputdir=dirname,outputdir=dirname)
                 os.mkdir(dirname)
-                mesh2d.create_mesh_2d(length=2,breadth=5,nelemx=8,nelemy=8,stf='homogeneous',bctype='trac')
+                mesh2d.create_mesh_2d(
+                                      length  = args.length,
+                                      breadth = args.breadth,
+                                      nelemx  = args.nelemx,
+                                      nelemy  = args.nelemy,
+                                      stf     = 'random',
+                                      bctype  = 'trac',
+                                      ninc    = args.ninc   
+                                     )
+
                 mesh2d.json_dump(filename=inputname)
 
             if (args.solve =='True'):
