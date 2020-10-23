@@ -43,50 +43,29 @@ if __name__ == '__main__':
     args = getargs()
 
     if ( args.generate == 'True') or ( args.solve == 'True'):
-    for itrain in range(args.ntrain):
-        dirname    = 'traindata'         + str(itrain)+'/'
-        inputname  = f'input'  + str(itrain) + '.json.in'
-        outputname = f'output' + str(itrain) + '.json.out'
-        
-        print(f'Creating training inputfiles for example {itrain+1} of {args.ntrain}')
-        mesh2d = FyPyMesh(inputdir=dirname,outputdir=dirname)
-        os.mkdir(dirname)
-        mesh2d.create_mesh_2d(length=2,breadth=5,nelemx=8,nelemy=8,stf='homogeneous',bctype='trac')
-        mesh2d.json_dump(filename=inputname)
-        
-        print(f'Solving example {itrain+1} of {args.ntrain}')
-        fypyargs = FyPyArgs(
-                            inputfile  = inputname,
-                            outputfile = outputname,
-                            inputdir   = dirname,
-                            outputdir  = dirname,
-                            partype    = 'list',
-                            profile    = 'False',
-                            solvertype = 'spsolve'
-                           )
-        fypy = FyPy(fypyargs)
-        fypy.doeverything(str(itrain))
+        for itrain in range(args.ntrain):
+            dirname    = 'traindata'         + str(itrain)+'/'
+            inputname  = f'input'  + str(itrain) + '.json.in'
+            outputname = f'output' + str(itrain) + '.json.out'
 
+            if (args.generate =='True'):
+                print(f'Creating training inputfiles for example {itrain+1} of {args.ntrain}')
+                mesh2d = FyPyMesh(inputdir=dirname,outputdir=dirname)
+                os.mkdir(dirname)
+                mesh2d.create_mesh_2d(length=2,breadth=5,nelemx=8,nelemy=8,stf='homogeneous',bctype='trac')
+                mesh2d.json_dump(filename=inputname)
 
-    '''
-    # run solver
-    # arguments for fypy
-    for itr,(dirname,ipf,opf) in enumerate(zip(dirlist,inputlist,outputlist)):
-        print(f'Solving example {itr+1} of {args.ntrain}')
-        fypyargs = FyPyArgs(
-                            inputfile  = ipf,
-                            outputfile = opf,
-                            inputdir   = dirname,
-                            outputdir  = dirname,
-                            partype    = 'list',
-                            profile    = 'False',
-                            solvertype = 'spsolve'
-                           )
-        fypy = FyPy(fypyargs)
-        fypy.doeverything(str(itr))
-        
-        # fypy.assembly()
-        # fypy.solve()
-        # fypy.output()
-        # fypy.postprocess()
-    '''
+            if (args.solve =='True'):
+
+                print(f'Solving example {itrain+1} of {args.ntrain}')
+                fypyargs = FyPyArgs(
+                                    inputfile  = inputname,
+                                    outputfile = outputname,
+                                    inputdir   = dirname,
+                                    outputdir  = dirname,
+                                    partype    = 'list',
+                                    profile    = 'False',
+                                    solvertype = 'spsolve'
+                                   )
+                fypy = FyPy(fypyargs)
+                fypy.doeverything(str(itrain))
