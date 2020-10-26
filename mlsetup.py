@@ -3,6 +3,7 @@ import os
 import glob
 import shutil
 import json
+import random
 from timerit import Timer
 
 # the object which will generate data
@@ -35,12 +36,22 @@ def getargs():
     # ntrain should be more than nclass + 1
     parser.add_argument('--ntrain',help='number of training examples to generate',required=False,type=int,default=16)
     parser.add_argument('--nhomo',help='number of homogeneous examples to generate',required=False,type=int,default=4)
-  
+    parser.add_argument('--nclassmin',help='minimum number of examples in each class',required=False,type=int,default=2)
+
     
     # system arguments
     parser.add_argument('--clean',help='delete previous data',required=False,type=str,default='False')
     
     args = parser.parse_args()
+
+    if ( args.problemtype == 'binary'):
+        assert(args.ntrain > args.nhomo),f'Number of training examples {args.ntrain} must exceed number of homogeneous examples {args.nhomo}'
+    if (args.problemtype =='multiclass'):
+        # extra 1 is for the homogeneous case
+        args.nlabel = args.nclassx*args.nclassy + 1
+        nclass = (args.nlabel)*args.nclassmin
+        assert( args.ntrain > nclass ),f'Number of training examples {args.ntrain} exceed {nclass}, computed on basis of minimum number of examples per class'
+        
     return args
 
 class FyPyArgs():
@@ -59,26 +70,68 @@ class FyPyArgs():
 def generate_binary_training_parameters(args):
     # nhomo homogeneous examples + ntrain random examples
     outlist = []
-
-
-
+    labels  = []
+    for itrain in range(0,args.ntrain):
+        dd = generate_random(args)
+        outlist.append(dd)
+        labels.append(1)
+        
+    # make homogeneous examples
+    for ihomo in range(0,args.nhomo):
+        outlist[ihomo]['stf']='homogeneous'
+        labels[ihomo] = 0
+        
+    # making and counting (how many positive and how many negative) labels
     
-    return outlist
+    return outlist,labels
 
 # will return list of dictionaries of parameter lists
 def generate_multiclass_training_parameters(args):
     # nhomo homogeneous examples + nclass classification examples + ntrain random examples
     outlist = []
+    labels  = []
+    for itrain in range(0,args.ntrain):
+        dd = generate_random(args)
+        outlist.append(dd)
+        labels.append(1)
 
-    
-    return outlist
+    make_label(args,outlist)
+
+    # generate the homogeneous examples
+    # for ihomo in range(0,args.nhomo):
+    #    outlist[ihome]['stf']='homogeneous'
+
+    # make sure there is atleast 1 example for each class
+    # making and counting labels of each type
+    return outlist,labels
+
+def make_label(args,outlist):
+    label = [0]*(args.nlabel)
+    print(args.nlabel)
+    pass
 
 def generate_random(args):
     # generates a random dictionary of parameters
     dd = {}
-    return 
 
+    dd['length']  = args.length
+    dd['breadth'] = args.breadth
+    dd['nelemx']  = args.nelemx
+    dd['nelemy']  = args.nelemy
+    dd['stf']     = 'inclusion'
+    dd['bctype']  = 'trac'
+    dd['ninc']    = args.ninc
+    dd['rmin']    = args.rmin
+    dd['rmax']    = args.rmax
+    dd['radius']  = random.uniform(args.rmin,args.rmax)
+    dd['xcen']    = random.uniform(0.0,args.length)
+    dd['ycen']    = random.uniform(0.0,args.breadth)
+    dd['stfmin']  = args.stfmin
+    dd['nu']      = args.nu
+    dd['nclassx'] = args.nclassx
+    dd['nclassy'] = args.nclassy
 
+    return dd 
  
 if __name__ == '__main__':
     
@@ -92,13 +145,50 @@ if __name__ == '__main__':
             shutil.rmtree(g)
 
     if ( args.generate == 'True') and (args.problemtype =='binary'):
-        generate_binary_training_parameters(args)
+        outlist,labels = generate_binary_training_parameters(args)
 
     if ( args.generate == 'True') and (args.problemtype =='multiclass'):
-        generate_multiclass_training_parameters(args)
+        outlist,labels = generate_multiclass_training_parameters(args)
 
-        
+    if (args.generate == 'True'):
+        for itrain,argdict in enumerate(outlist):
+             dirname     = f'{dirprefix}'         + str(itrain)+'/'
+             outputname  = f'input'  + str(itrain) + '.json.in'
+             labelname   = f'{dirname}'+f'label'  + str(itrain) + '.json.in'
+             print(f'Creating training inputfiles for example {itrain+1} of {args.ntrain} {args.problemtype} classification')
+             mesh2d = FyPyMesh(inputdir=dirname,outputdir=dirname)
+             os.mkdir(dirname)
+             mesh2d.create_mesh_2d(**argdict)
+             mesh2d.json_dump(filename=outputname)
+             mesh2d.preprocess(str(itrain))
+             # dump label
+             labeldir = {}
+             labeldir['label']=labels[itrain]
+             with open(labelname,'x') as fout:
+                 json.dump(labeldir,fout,indent=4)
 
+    if (args.solve == 'True'):
+        for itrain,dd in enumerate(outlist):
+             dirname    = f'{dirprefix}'         + str(itrain)+'/'
+             inputname  = f'input'  + str(itrain) + '.json.in'
+             outputname = f'output' + str(itrain) + '.json.out'
+             print(f'Solving training example {itrain+1} of {args.ntrain} {args.problemtype} classification')
+             tsolve = Timer('Solve timer',verbose=0)
+             with tsolve:
+                 fypyargs = FyPyArgs(
+                        inputfile  = inputname,
+                        outputfile = outputname,
+                        inputdir   = dirname,
+                        outputdir  = dirname,
+                        partype    = 'list',
+                        profile    = 'False',
+                        solvertype = 'spsolve'
+                    )
+                 fypy = FyPy(fypyargs)
+                 fypy.doeverything(str(itrain))
+             print(f'Solved example {itrain+1} of {args.ntrain} in {tsolve.elapsed:.2f}s')
+             
+                                   
     # if ( args.generate == 'True') or ( args.solve == 'True'):
         
     #     for itrain in range(args.ntrain):
