@@ -4,7 +4,9 @@ import glob
 import shutil
 import json
 import random
+
 from timerit import Timer
+from collections import Counter
 
 # the object which will generate data
 from fypy.src.fypy    import FyPy
@@ -95,9 +97,10 @@ def generate_multiclass_training_parameters(args):
           f'compulsary/minimum training examples {args.ntrain-args.nminexamp}',
           f'random training examples')
     
-    outlist = []               # list of arguments to pass to mesh creator
-    labels  = []*args.ntrain   # list of labels (list of lists of size nlabel)
-    centers = []               # list of centers used to determine labels.
+    outlist  = []               # list of arguments to pass to mesh creator
+    labels   = []*args.ntrain   # list of labels (list of lists of size nlabel)
+    centers  = []               # list of centers used to determine labels.
+    category = []*args.ntrain   # numerical value of the cateory for each label
 
     # A typical label is [ 0 1 0 0 ...0] of length nlabel
     # having 1 in the class where the stiffness belongs to and zeros elsewhere
@@ -114,19 +117,21 @@ def generate_multiclass_training_parameters(args):
             ycen = (dy/2.0) + dy*iclassy
             centers.append([xcen,ycen])
             
-    # generate arguments for the mesher 
+    # generate arguments for the mesher and label 'all' examples
     for itrain in range(0,args.ntrain):
         dd = generate_random(args)
         outlist.append(dd)
         # create dummy labels for now
-        labels.append([0]*args.ntrain)
+        # labels.append([0]*args.ntrain)
+        ll = get_closest(args,centers,dd['xcen'],dd['ycen'])
+        labels.append(ll)
 
     # generate the homogeneous examples
     # by changing the arguments ('inclusion'->'homogeneous') for the mesher
     for ihomo in range(0,args.nclassmin):
         outlist[ihomo]['stf']='homogeneous'
         ll    = [0]*args.nlabel
-        ll[0] = 1
+        ll[0] = 1                     # homogeneous example gets 1 in the first entry, zeros everywhere else
         labels[ihomo] = ll
 
     # make sure that we have training examples for each class
@@ -155,7 +160,8 @@ def generate_multiclass_training_parameters(args):
                 outlist[idx]['radius'] = rad
                 outlist[idx]['xcen']   = xcen
                 outlist[idx]['ycen']   = ycen
-
+                ll = get_closest(args,centers,xcen,ycen)
+                labels[idx] = ll
                 # create dummy labels for now
                 # labels.append([0]*args.ntrain)
                 # print(rad,xcen,ycen)
@@ -165,9 +171,23 @@ def generate_multiclass_training_parameters(args):
 
     return outlist,labels
 
-#def make_label(args,outlist):
-#    labels = [ [0]*(args.nlabel) for itrain in args.ntrain]
-#    return labels
+def get_closest(args,centers,xx,yy):
+    maxlength = (args.length**2.0 + args.breadth**2.0)**0.5
+    closest   = -10
+    for icen,(cenx,ceny) in enumerate(centers):
+        dist = ((xx-cenx)**2.0 + (yy-ceny)**2.0)**0.5
+        if (dist <= maxlength):
+            closest   = icen
+            maxlength = dist
+
+    label = [0]*args.nlabel
+    # if 'closest' is 0 , the 1st place in 'label' is 1
+    # if 'closest' is 1 , the 2nd place in 'label' is 1
+    # and so on
+    label[closest+1] = 1
+    # return label vector and label id
+    return label
+
 
 def generate_random(args):
     # generates a random dictionary of parameters
