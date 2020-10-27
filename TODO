@@ -1,7 +1,8 @@
 ML Strategy
-
+0) ML to classify stiffness fields. Given a stiffness field, classify it into prefined classes
 1) Binary classification: Is there an inclusion or not?
 2) Multi-class classification: Divide training examples into 10 classes (1 homogeneous + 9 examples corresponding to grid of stiffnesses)
 3) Get ML to compute location, radius, and stiffness of tumor. i.e. make real vaued predictions instead of only classifying
 4) Get ML to predict the complete distribution of stiffness
 5) ML breast model 2D (realistic parameters)
+6) Consider the case of tumors spanning more than 1 training cell

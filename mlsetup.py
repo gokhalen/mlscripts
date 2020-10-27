@@ -11,7 +11,8 @@ from fypy.src.fypy    import FyPy
 from fypy.src.libmesh import FyPyMesh
 
 def getargs():
-    parser = argparse.ArgumentParser(description='driver script to generate data for Elasticity Imaging ml')
+    parser = argparse.ArgumentParser(description='driver script to generate data for Elasticity Imaging Machine Learning (EIML)')
+    
     parser.add_argument('--prefix',help='prefix for training example directories',required=False,default='traindata',type=str)
 
     parser.add_argument('--problemtype',help='binary classification or multiclass classification',required=True,choices=['binary','multiclass'])
@@ -20,8 +21,8 @@ def getargs():
 
 
     parser.add_argument('--ninc',help='number of inclusions',required=False,type=int,default=1)
-    parser.add_argument('--rmin',help='lower bound on inclusion radius',required=False,type=float,default=0.1)
-    parser.add_argument('--rmax',help='lower bound on inclusion radius',required=False,type=float,default=0.25)
+    parser.add_argument('--rmin',help='lower bound on inclusion radius',required=False,type=float,default=0.7)
+    parser.add_argument('--rmax',help='lower bound on inclusion radius',required=False,type=float,default=1.0)
     parser.add_argument('--nelemx',help='number of elements in the x-direction',required=False,type=int,default=16)
     parser.add_argument('--nelemy',help='number of elements in the y-direction',required=False,type=int,default=16)
     parser.add_argument('--length',help='length of the domain in x direction',required=False,type=int,default=2.0)
@@ -46,11 +47,12 @@ def getargs():
 
     if ( args.problemtype == 'binary'):
         assert(args.ntrain > args.nhomo),f'Number of training examples {args.ntrain} must exceed number of homogeneous examples {args.nhomo}'
+        args.nlabel =  1
     if (args.problemtype =='multiclass'):
         # extra 1 is for the homogeneous case
-        args.nlabel = args.nclassx*args.nclassy + 1
-        nclass = (args.nlabel)*args.nclassmin
-        assert( args.ntrain > nclass ),f'Number of training examples {args.ntrain} exceed {nclass}, computed on basis of minimum number of examples per class'
+        args.nlabel    = args.nclassx*args.nclassy + 1
+        args.nminexamp = (args.nlabel)*args.nclassmin
+        assert( args.ntrain > args.nminexamp ),f'Number of training examples {args.ntrain} must exceed {args.nminexamp}, computed on basis of minimum number of examples per class'
         
     return args
 
@@ -69,17 +71,17 @@ class FyPyArgs():
 # will return list of dictionaries of parameter lists
 def generate_binary_training_parameters(args):
     # nhomo homogeneous examples + ntrain random examples
-    outlist = []
-    labels  = []
+    outlist = []                                # list of arguments to pass to mesh creator
+    labels  = []                                # list of labels
     for itrain in range(0,args.ntrain):
         dd = generate_random(args)
         outlist.append(dd)
-        labels.append(1)
+        labels.append([1])
         
     # make homogeneous examples
     for ihomo in range(0,args.nhomo):
         outlist[ihomo]['stf']='homogeneous'
-        labels[ihomo] = 0
+        labels[ihomo] = [0]
         
     # making and counting (how many positive and how many negative) labels
     
@@ -88,32 +90,93 @@ def generate_binary_training_parameters(args):
 # will return list of dictionaries of parameter lists
 def generate_multiclass_training_parameters(args):
     # nhomo homogeneous examples + nclass classification examples + ntrain random examples
-    outlist = []
-    labels  = []
+
+    print(f'Generating {args.ntrain} training examples,{args.nminexamp}',
+          f'compulsary/minimum training examples {args.ntrain-args.nminexamp}',
+          f'random training examples')
+    
+    outlist = []               # list of arguments to pass to mesh creator
+    labels  = []*args.ntrain   # list of labels (list of lists of size nlabel)
+    centers = []               # list of centers used to determine labels.
+
+    # A typical label is [ 0 1 0 0 ...0] of length nlabel
+    # having 1 in the class where the stiffness belongs to and zeros elsewhere
+
+
+    dx  = args.length  / args.nclassx
+    dy  = args.breadth / args.nclassy
+    
+    # initialize centers
+    for iclassx in range(args.nclassx):
+        for iclassy in range(args.nclassy):
+            idx  = iclassx*args.nclassy + iclassy
+            xcen = (dx/2.0) + dx*iclassx
+            ycen = (dy/2.0) + dy*iclassy
+            centers.append([xcen,ycen])
+            
+    # generate arguments for the mesher 
     for itrain in range(0,args.ntrain):
         dd = generate_random(args)
         outlist.append(dd)
-        labels.append(1)
-
-    make_label(args,outlist)
+        # create dummy labels for now
+        labels.append([0]*args.ntrain)
 
     # generate the homogeneous examples
-    # for ihomo in range(0,args.nhomo):
-    #    outlist[ihome]['stf']='homogeneous'
+    # by changing the arguments ('inclusion'->'homogeneous') for the mesher
+    for ihomo in range(0,args.nclassmin):
+        outlist[ihomo]['stf']='homogeneous'
+        ll    = [0]*args.nlabel
+        ll[0] = 1
+        labels[ihomo] = ll
+
+    # make sure that we have training examples for each class
+    # each cell in the classification grid must have an inclusion
+    # generate minimum training examples 'nclassmin' for each class
+    for iclass in range(args.nclassmin):
+        for iclassx in range(args.nclassx):
+            for iclassy in range(args.nclassy):
+                idx   = iclassx*args.nclassy + iclassy + args.nclassmin + iclass*(args.nclassx*args.nclassy)
+                idcen = iclassx*args.nclassy + iclassy
+                # what happends if the tumor is in more than 1 training cell
+                # one thing we can do, is change the label vector to be 1 in all the cells which have the tumor
+                # but let's leave that for now
+                xcen,ycen = centers[idcen]
+                if ( iclass == 0):
+                    # first example at the center of each cell of the training grid
+                    rad  = min(dx/2.0,dy/2.0)*0.6
+                else:
+                    # second example at a random point in each cell of the training grid
+                    xmin = dx*iclassx; xmax = (dx+1)*iclassx
+                    ymin = dy*iclassy; ymax = (dy+1)*iclassy
+                    xcen = random.uniform(xmin,xmax)
+                    ycen = random.uniform(ymin,ymax)
+                    rad  = min(dx/2.0,dy/2.0)*0.6*random.uniform(0.6,1.0)
+
+                outlist[idx]['radius'] = rad
+                outlist[idx]['xcen']   = xcen
+                outlist[idx]['ycen']   = ycen
+
+                # create dummy labels for now
+                # labels.append([0]*args.ntrain)
+                # print(rad,xcen,ycen)
 
     # make sure there is atleast 1 example for each class
     # making and counting labels of each type
+
     return outlist,labels
 
-def make_label(args,outlist):
-    label = [0]*(args.nlabel)
-    print(args.nlabel)
-    pass
+#def make_label(args,outlist):
+#    labels = [ [0]*(args.nlabel) for itrain in args.ntrain]
+#    return labels
 
 def generate_random(args):
     # generates a random dictionary of parameters
     dd = {}
-
+    
+    dx   = args.length  / args.nclassx
+    dy   = args.breadth / args.nclassy
+    rad  = min(dx/2.0,dy/2.0)*0.6
+    
     dd['length']  = args.length
     dd['breadth'] = args.breadth
     dd['nelemx']  = args.nelemx
@@ -123,7 +186,7 @@ def generate_random(args):
     dd['ninc']    = args.ninc
     dd['rmin']    = args.rmin
     dd['rmax']    = args.rmax
-    dd['radius']  = random.uniform(args.rmin,args.rmax)
+    dd['radius']  = random.uniform(rad*args.rmin,rad*args.rmax)
     dd['xcen']    = random.uniform(0.0,args.length)
     dd['ycen']    = random.uniform(0.0,args.breadth)
     dd['stfmin']  = args.stfmin
@@ -154,7 +217,7 @@ if __name__ == '__main__':
         for itrain,argdict in enumerate(outlist):
              dirname     = f'{dirprefix}'         + str(itrain)+'/'
              outputname  = f'input'  + str(itrain) + '.json.in'
-             labelname   = f'{dirname}'+f'label'  + str(itrain) + '.json.in'
+             labelname   = f'{dirname}'+f'mlinfo'  + str(itrain) + '.json.in'
              print(f'Creating training inputfiles for example {itrain+1} of {args.ntrain} {args.problemtype} classification')
              mesh2d = FyPyMesh(inputdir=dirname,outputdir=dirname)
              os.mkdir(dirname)
@@ -189,53 +252,4 @@ if __name__ == '__main__':
              print(f'Solved example {itrain+1} of {args.ntrain} in {tsolve.elapsed:.2f}s')
              
                                    
-    # if ( args.generate == 'True') or ( args.solve == 'True'):
-        
-    #     for itrain in range(args.ntrain):
-    #         dirname    = f'{dirprefix}'         + str(itrain)+'/'
-    #         inputname  = f'input'  + str(itrain) + '.json.in'
-    #         outputname = f'output' + str(itrain) + '.json.out'
-
-    #         if (args.generate =='True'):
-    #             print(f'Creating training inputfiles for example {itrain+1} of {args.ntrain}')
-    #             mesh2d = FyPyMesh(inputdir=dirname,outputdir=dirname)
-    #             os.mkdir(dirname)
-    #             mesh2d.create_mesh_2d(
-    #                                   length  = args.length,
-    #                                   breadth = args.breadth,
-    #                                   nelemx  = args.nelemx,
-    #                                   nelemy  = args.nelemy,
-    #                                   stf     = 'inclusion',
-    #                                   bctype  = 'trac',
-    #                                   ninc    = args.ninc,
-    #                                   rmin    = args.rmin,
-    #                                   rmax    = args.rmax,
-    #                                   radius  = 1.0,
-    #                                   xcen    = 2.0,
-    #                                   ycen    = 2.0,
-    #                                   stfmin  = args.stfmin,
-    #                                   stfmax  = args.stfmax,
-    #                                   nu      = args.nu,
-    #                                   nclassx = args.nclassx,
-    #                                   nclassy = args.nclassy,
-    #                                  )
-
-    #             mesh2d.json_dump(filename=inputname)
-    #             mesh2d.preprocess(str(itrain))
-
-    #         if (args.solve =='True'):
-    #             tsolve = Timer('Solve timer',verbose=0)
-    #             with tsolve:
-    #                 fypyargs = FyPyArgs(
-    #                     inputfile  = inputname,
-    #                     outputfile = outputname,
-    #                     inputdir   = dirname,
-    #                     outputdir  = dirname,
-    #                     partype    = 'list',
-    #                     profile    = 'False',
-    #                     solvertype = 'spsolve'
-    #                 )
-    #                 fypy = FyPy(fypyargs)
-    #                 fypy.doeverything(str(itrain))
-    #             print(f'Solved example {itrain+1} of {args.ntrain} in {tsolve.elapsed:.2f}s')
 
