@@ -1,5 +1,7 @@
+0) Check if classification is being carried out correctly
+
 ML Strategy
-0) ML to classify stiffness fields. Given a stiffness field, classify it into prefined classes
+0) ML to classify stiffness fields. Given a stiffness field, classify it into predefined classes
 1) Binary classification: Is there an inclusion or not?
 2) Multi-class classification: Divide training examples into 10 classes (1 homogeneous + 9 examples corresponding to grid of stiffnesses)
 3) Get ML to compute location, radius, and stiffness of tumor. i.e. make real vaued predictions instead of only classifying
