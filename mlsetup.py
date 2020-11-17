@@ -13,6 +13,59 @@ from collections import Counter
 from fypy.src.fypy    import FyPy
 from fypy.src.libmesh import FyPyMesh
 
+'''
+Nachiket Gokhale gokhalen@gmail.com
+
+This script generates training, validation and testing examples for binary classification.
+This works as follows
+
+1. Getting arguments: `getargs` is called to get arguments (the object `args`)
+2. Example generation: if `args.generate` is True, all examples (depending on args.problemtype) are generated and written to disk
+3. Solving: If `args.solve` is True, the examples are solved
+
+The meat of this script is in `2. Example generation`.
+
+4. Binary Classification: examples are generated using `generate_binary_training_parameters(args)`
+5. Multiclass classification: examples are generated using `generate_multiclass_training_parameters(args)`
+
+We will now take a closer look at these. 
+
+6. Binary Classification:
+   1. `args.ntotal` random examples are generated using `generate_random(args)`.
+      `generate_random` generates random circular inclusions.
+      `generate_random` basically creates a dictionary which FyPyMesh uses to create meshes
+       labels and categories are set manually
+
+   2. `args.nhomo` examples are made homogeneous by setting `stf` to `homogeneous`
+       We need to make homogeneous examples explicitly because `generate_random` does not do that for us.
+
+   3. We count number of positive and negative training examples
+
+7. Multiclass classifcation:
+ 
+   1. We divide the domain into `args.nclassx` cells in the x direction and `args.nclassy` 
+      cells in the y direction, calculate their centers. These cells are our classes. 
+      We aim to classify a tumor into one of these cells (or homogeneous), depending
+      on where its center is located.  We create labels for each class, stored in labellist
+
+   2. We generate all examples.
+          1. `generate_random_multiclass`: this is `generate_random` plus some code 
+              to generate homogeneous examples as well
+
+          2. we make label and categorize example using `make_label`
+              
+          
+  3. Overwrite:
+          1. Overwrite the first args.nminexamp to make sure that each class contains 
+             atleast args.nminexamp examples
+
+  4. Make labels and count
+
+
+'''
+
+
+
 def getargs():
     parser = argparse.ArgumentParser(description='driver script to generate data for Elasticity Imaging Machine Learning (EIML)')
     

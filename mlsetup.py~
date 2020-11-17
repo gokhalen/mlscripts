@@ -39,8 +39,8 @@ def getargs():
 
     # see below, where we check problemtype, for constraints on ntrain  
     parser.add_argument('--ntrain',help='number of training   examples to generate',required=False,type=int,default=16)
-    parser.add_argument('--nvalid',help='number of validation examples to generate',required=False,type=int,default=6)
-    parser.add_argument('--ntest', help='number of test examples to generate',      required=False,type=int,default=6)
+    parser.add_argument('--nvalid',help='number of validation examples to generate',required=False,type=int)
+    parser.add_argument('--ntest', help='number of test examples to generate',      required=False,type=int)
 
     parser.add_argument('--nhomo',help='number of homogeneous examples to generate',required=False,type=int,default=4)
     parser.add_argument('--nclassmin',help='minimum number of examples in each class',required=False,type=int,default=2)
@@ -50,6 +50,12 @@ def getargs():
     parser.add_argument('--clean',help='delete previous data',required=False,type=str,default='False')
     
     args = parser.parse_args()
+
+    # if number of validation and test examples are not provided then create them
+    if (args.nvalid == None): args.nvalid = int(0.3*args.ntrain); 
+    if (args.ntest  == None): args.ntest  = int(0.3*args.ntrain); 
+
+    args.ntotal  = args.ntrain + args.nvalid + args.ntest
 
     if ( args.problemtype == 'binary'):
         assert(args.ntrain > args.nhomo),f'Number of training examples {args.ntrain} must exceed number of homogeneous examples {args.nhomo}'
@@ -75,18 +81,17 @@ class FyPyArgs():
 
 # will return list of dictionaries of parameter lists
 def generate_binary_training_parameters(args):
-    # nhomo homogeneous examples + ntrain random examples
     outlist = []                                # list of arguments to pass to mesh creator
     labels  = []                                # list of labels. This is a list of lists to
                                                 # keep it consistent with multiclass classification
     counts  = [0]*args.nlabel                   # only two types of labels
-    category = [None]*args.ntrain
+    category = [None]*args.ntotal
     
-    for itrain in range(0,args.ntrain):
+    for iexample in range(0,args.ntotal):
         dd = generate_random(args)
         outlist.append(dd)
         labels.append([1])
-        category[itrain] = 1
+        category[iexample] = 1
         
     # make homogeneous examples
     for ihomo in range(0,args.nhomo):
@@ -99,8 +104,8 @@ def generate_binary_training_parameters(args):
     counts[1] = labels.count([1])
 
     print('-'*80)
-    print(f'Binary classificaton: Positive (tumor)       examples {counts[1]} {(counts[1]/args.ntrain)*100:0.2f}%')
-    print(f'Binary classificaton: Negative (homogeneous) examples {counts[0]} {(counts[0]/args.ntrain)*100:0.2f}%')
+    print(f'Binary classificaton: Positive (tumor)       examples {counts[1]} {(counts[1]/args.ntotal)*100:0.2f}%')
+    print(f'Binary classificaton: Negative (homogeneous) examples {counts[0]} {(counts[0]/args.ntotal)*100:0.2f}%')
     print(f'Binary classificaton: Total examples {args.ntrain}')
     print('-'*80)
     
@@ -110,14 +115,16 @@ def generate_binary_training_parameters(args):
 def generate_multiclass_training_parameters(args):
     # nhomo homogeneous examples + nclass classification examples + ntrain random examples
 
-    print(f'Generating {args.ntrain} training examples,{args.nminexamp}',
+    print(f'Generating {args.ntotal} training examples,{args.nminexamp}',
           f'compulsary/minimum training examples {args.ntrain-args.nminexamp}',
-          f'random training examples')
+          f'random training examples',
+          f'{args.nvalid} validation examples',
+          f'{args.ntest} testing examples')
     
     outlist  = []                   # list of arguments to pass to mesh creator
-    labels   = [None]*args.ntrain   # list of labels (list of lists of size nlabel)
+    labels   = [None]*args.ntotal   # list of labels (list of lists of size nlabel)
     centers  = []                   # list of centers used to determine labels.
-    category = [None]*args.ntrain   # numerical value of the cateory for each label
+    category = [None]*args.ntotal   # numerical value of the cateory for each label
     counts   = [0]*args.nlabel      # counts for each label
 
     labellist = [None]*args.nlabel  # store each label - used for counting
@@ -145,14 +152,14 @@ def generate_multiclass_training_parameters(args):
             labellist[idx+1] = ll
 
     # generate arguments for the mesher and label 'all' examples
-    for itrain in range(0,args.ntrain):
+    for iexample in range(0,args.ntotal):
         dd = generate_random_multiclass(args)
         outlist.append(dd)
         # create dummy labels for now
         # labels.append([0]*args.ntrain)
         ll,cat = make_label(args,centers,dd)
-        labels[itrain]=ll
-        category[itrain]=cat
+        labels[iexample]=ll
+        category[iexample]=cat
 
     # overwrite the first args.nminexamp with homogeneous and labelled examples
     # this is done so that we have minimum number of examples from each class
@@ -209,7 +216,7 @@ def generate_multiclass_training_parameters(args):
 
     for ilabel in range(args.nlabel):
         counts[ilabel] = labels.count(labellist[ilabel])
-        print(f'Multiclass classification: Class {ilabel+1} has {counts[ilabel]} training examples {(counts[ilabel]/args.ntrain)*100:0.2f}%')
+        print(f'Multiclass classification: Class {ilabel+1} has {counts[ilabel]} training examples {(counts[ilabel]/args.ntotal)*100:0.2f}%')
 
     return outlist,labels,counts,category
 
@@ -268,7 +275,6 @@ def generate_random(args):
 
     return dd
 
-
 def generate_random_multiclass(args):
     # if random choice is 0 then return homogeneous stiffness
     dd      = generate_random(args)
@@ -278,16 +284,31 @@ def generate_random_multiclass(args):
     if (ichoice == 0):
         dd['stf']='homogeneous'
 
-    return dd 
+    return dd
+
+def make_file_names(args,idx):
+    if ( idx < args.ntrain):
+        dirname     = f'{args.prefix}' + '_train'  + str(idx)+'/'
+
+    if ( args.ntrain <= idx < args.ntrain + args.nvalid):
+        dirname     = f'{args.prefix}' + '_valid'  + str(idx)+'/'
+
+    if ( (args.ntrain + args.nvalid) <= idx < args.ntotal):
+        dirname     = f'{args.prefix}' + '_test'  + str(idx)+'/'
+        
+    inputname   = f'input'  + str(idx) + '.json.in'
+    outputname  = f'output' + str(idx) + '.json.out'
+    labelname   = f'{dirname}'+f'mlinfo'  + str(idx) + '.json.in'
+    
+    return dirname,inputname,outputname,labelname
  
 if __name__ == '__main__':
     
     args = getargs()
-    dirprefix= args.prefix
 
     # clean directory if asked to. safer than manual rm -rf *
     if (args.clean == 'True'):
-        gg = glob.glob(f'{dirprefix}*')
+        gg = glob.glob(f'{args.prefix}*')
         for g in gg:
             shutil.rmtree(g)
 
@@ -298,43 +319,43 @@ if __name__ == '__main__':
         outlist,labels,counts,category = generate_multiclass_training_parameters(args)
 
     if (args.generate == 'True'):
-        for itrain,argdict in enumerate(outlist):
-             dirname     = f'{dirprefix}'         + str(itrain)+'/'
-             outputname  = f'input'  + str(itrain) + '.json.in'
-             labelname   = f'{dirname}'+f'mlinfo'  + str(itrain) + '.json.in'
-             print(f'Creating training inputfiles for example {itrain+1} of {args.ntrain} {args.problemtype} classification')
-             mesh2d = FyPyMesh(inputdir=dirname,outputdir=dirname)
-             os.mkdir(dirname)
-             mesh2d.create_mesh_2d(**argdict)
-             mesh2d.json_dump(filename=outputname)
-             mesh2d.preprocess(str(itrain))
-             # dump label
-             mlinfodir = {}
-             mlinfodir['label']    = labels[itrain]
-             mlinfodir['xcen']     = argdict['xcen']
-             mlinfodir['ycen']     = argdict['ycen']
-             mlinfodir['category'] = category[itrain]
-             mlinfodir['radius']   = argdict['radius']
+        for iexample,argdict in enumerate(outlist):
+            dirname,inputname,outputname,labelname = make_file_names(args,iexample)
+            
+            print(f'Creating training inputfiles for example {iexample+1} of {args.ntotal} {args.problemtype} classification')
+            mesh2d = FyPyMesh(inputdir=dirname,outputdir=dirname)
+            os.mkdir(dirname)
+            mesh2d.create_mesh_2d(**argdict)
+            mesh2d.json_dump(filename=inputname)
+            mesh2d.preprocess(str(iexample))
+            # dump label
+            mlinfodir = {}
+            mlinfodir['label']    = labels[iexample]
+            mlinfodir['xcen']     = argdict['xcen']
+            mlinfodir['ycen']     = argdict['ycen']
+            mlinfodir['category'] = category[iexample]
+            mlinfodir['radius']   = argdict['radius']
 
 
-             if ( argdict['xcen'] >= args.length):
-                 print(f'xcen out of range in {itrain=}')
+            if ( argdict['xcen'] >= args.length):
+                print(f'xcen out of range in {iexample=}')
 
-             if ( argdict['ycen'] >= args.breadth):
-                 print(f'ycen out of range in {itrain=}')
+            if ( argdict['ycen'] >= args.breadth):
+                print(f'ycen out of range in {iexample=}')
 
-             if ( ( itrain >=2 ) and (itrain <=args.nminexamp)) and ( argdict['stf'] == 'homogeneous'):
-                 print(f'Invalid homogeneous entry at {itrain=}')
-             
-             with open(labelname,'x') as fout:
-                 json.dump(mlinfodir,fout,indent=4)
+            if (args.problemtype=='multiclass'):
+                if ( ( iexample >=2 ) and (iexample < args.nminexamp) ) and ( argdict['stf'] == 'homogeneous'):
+                    print(f'Invalid homogeneous entry at {iexample=}')
+
+            # dump machine learning info
+            with open(labelname,'x') as fout:
+                json.dump(mlinfodir,fout,indent=4)
 
     if (args.solve == 'True'):
-        for itrain,dd in enumerate(outlist):
-             dirname    = f'{dirprefix}'         + str(itrain)+'/'
-             inputname  = f'input'  + str(itrain) + '.json.in'
-             outputname = f'output' + str(itrain) + '.json.out'
-             print(f'Solving training example {itrain+1} of {args.ntrain} {args.problemtype} classification')
+        for iexample,dd in enumerate(outlist):
+             dirname,inputname,outputname,labelname = make_file_names(args,iexample)
+             
+             print(f'Solving training example {iexample+1} of {args.ntotal} {args.problemtype} classification')
              tsolve = Timer('Solve timer',verbose=0)
              with tsolve:
                  fypyargs = FyPyArgs(
@@ -347,8 +368,8 @@ if __name__ == '__main__':
                         solvertype = 'spsolve'
                     )
                  fypy = FyPy(fypyargs)
-                 fypy.doeverything(str(itrain))
-             print(f'Solved example {itrain+1} of {args.ntrain} in {tsolve.elapsed:.2f}s')
+                 fypy.doeverything(str(iexample))
+             print(f'Solved example {iexample+1} of {args.ntotal} in {tsolve.elapsed:.2f}s')
              
                                    
 
