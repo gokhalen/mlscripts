@@ -59,12 +59,10 @@ We will now take a closer look at these.
           1. Overwrite the first args.nminexamp to make sure that each class contains 
              atleast args.nminexamp examples
 
-  4. Make labels and count
+  4. Make labels and count and categorize
 
 
 '''
-
-
 
 def getargs():
     parser = argparse.ArgumentParser(description='driver script to generate data for Elasticity Imaging Machine Learning (EIML)')
@@ -153,13 +151,15 @@ def generate_binary_training_parameters(args):
         category[ihomo] = 0
         
     # making and counting (how many positive and how many negative) labels
-    counts[0] = labels.count([0])
-    counts[1] = labels.count([1])
+    # count only in the training examples
+    llcount   = labels[:args.ntrain]
+    counts[0] = llcount.count([0])
+    counts[1] = llcount.count([1])
 
     print('-'*80)
-    print(f'Binary classificaton: Positive (tumor)       examples {counts[1]} {(counts[1]/args.ntotal)*100:0.2f}%')
-    print(f'Binary classificaton: Negative (homogeneous) examples {counts[0]} {(counts[0]/args.ntotal)*100:0.2f}%')
-    print(f'Binary classificaton: Total examples {args.ntrain}')
+    print(f'Binary classificaton: Positive (tumor)       examples {counts[1]} {(counts[1]/args.ntrain)*100:0.2f}%')
+    print(f'Binary classificaton: Negative (homogeneous) examples {counts[0]} {(counts[0]/args.ntrain)*100:0.2f}%')
+    print(f'Binary classificaton: Total examples {args.ntotal}, Training examples {args.ntrain}, Validation examples {args.nvalid}, Test Examples {args.ntest} ')
     print('-'*80)
     
     return outlist,labels,counts,category
@@ -267,9 +267,10 @@ def generate_multiclass_training_parameters(args):
     # make sure there is atleast 1 example for each class
     # making and counting labels of each type
 
+    llcount = labels[:args.ntrain]
     for ilabel in range(args.nlabel):
-        counts[ilabel] = labels.count(labellist[ilabel])
-        print(f'Multiclass classification: Class {ilabel+1} has {counts[ilabel]} training examples {(counts[ilabel]/args.ntotal)*100:0.2f}%')
+        counts[ilabel] = llcount.count(labellist[ilabel])
+        print(f'Multiclass classification: Class {ilabel+1} has {counts[ilabel]} training examples {(counts[ilabel]/args.ntrain)*100:0.2f}%')
 
     return outlist,labels,counts,category
 
