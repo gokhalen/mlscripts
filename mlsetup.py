@@ -79,8 +79,8 @@ def getargs():
     parser.add_argument('--rmax',help='lower bound on inclusion radius',required=False,type=float,default=1.0)
     parser.add_argument('--nelemx',help='number of elements in the x-direction',required=False,type=int,default=16)
     parser.add_argument('--nelemy',help='number of elements in the y-direction',required=False,type=int,default=16)
-    parser.add_argument('--length',help='length of the domain in x direction',required=False,type=int,default=1.0)
-    parser.add_argument('--breadth',help='length of the domain in y direction',required=False,type=int,default=1.0)
+    parser.add_argument('--length',help='length of the domain in x direction',required=False,type=float,default=1.0)
+    parser.add_argument('--breadth',help='length of the domain in y direction',required=False,type=float,default=1.0)
     # total number of classes is nclass=nclassx*nclassy + 1 (for homogeneous)
     parser.add_argument('--nclassx',help='number of classes to classify into (in x direction)',required=False,type=int,default=1)
     parser.add_argument('--nclassy',help='number of classes to classify into (in y direction)',required=False,type=int,default=1)
@@ -385,11 +385,17 @@ if __name__ == '__main__':
             # dump label
             mlinfodir = {}
             mlinfodir['label']    = labels[iexample]
+            mlinfodir['category'] = category[iexample]
+            mlinfodir.update(argdict)
+            
+            '''
             mlinfodir['xcen']     = argdict['xcen']
             mlinfodir['ycen']     = argdict['ycen']
-            mlinfodir['category'] = category[iexample]
             mlinfodir['radius']   = argdict['radius']
-
+            mlinfodir['length']   = argdict['length']
+            mlinfodir['breadth']  = argdict['breadth']
+            mlinfodir['nclassx']  = argdict['length']
+            '''
 
             if ( argdict['xcen'] >= args.length):
                 print(f'xcen out of range in {iexample=}')
