@@ -432,4 +432,4 @@ if __name__ == '__main__':
              print(f'Solved example {iexample+1} of {args.ntotal} in {tsolve.elapsed:.2f}s')
              
                                    
-
+### Delete this ....

@@ -9,3 +9,6 @@ ML Strategy
 4) Get ML to predict the complete distribution of stiffness
 5) ML breast model 2D (realistic parameters)
 6) Consider the case of tumors spanning more than 1 training cell
+
+Other ideas:
+0) See if one can output a bounding box for the stiffness. Maybe a boundary/edge detection algorithm will be able to create a non linear boundary as well.
