@@ -7,5 +7,9 @@ ML Strategy
 2) Multi-class classification: Divide training examples into 10 classes (1 homogeneous + 9 examples corresponding to grid of stiffnesses)
 3) Get ML to compute location, radius, and stiffness of tumor. i.e. make real vaued predictions instead of only classifying
 4) Get ML to predict the complete distribution of stiffness
-5) ML breast model 2D (realistic parameters)
-6) Consider the case of tumors spanning more than 1 training cell
+
+6) ML breast model 2D (realistic material parameters and geometry). How do we feed this realistic geometry into the NN? One way is to make a rectangular image using PyVista and then run CNN on the image. I don't like this because we're losing control on information.  
+7) Consider the case of tumors spanning more than 1 training cell
+
+Other ideas:
+0) See if one can output a bounding box for the stiffness. Maybe a boundary/edge detection algorithm will be able to create a non linear boundary as well.
