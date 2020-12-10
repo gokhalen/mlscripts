@@ -157,7 +157,6 @@ cnn.add(tf.keras.layers.Dense(units=128, activation='relu'))
 # Step 5 - Output Layer
 cnn.add(tf.keras.layers.Dense(units=1, activation='sigmoid'))
 
-
 # plot
 tf.keras.utils.plot_model(
         cnn, to_file='model.png', show_shapes=True, show_layer_names=True,
@@ -178,15 +177,8 @@ cnn.summary()
 history=cnn.fit(x = train_data[0], y = train_data[1],
                 validation_data = valid_data, epochs = nepochs)
 
-plt.figure('Training Accuracy')
-train_accuracy = history.history['accuracy']
-epochs         = range(1, len(train_accuracy)+1)
-plt.plot(epochs, train_accuracy)
-plt.title('Training Accuracy')
-plt.xlabel('Epochs')
-plt.ylabel('Training Accuracy')
 
-'''
+# plot 
 for ikey in history.history.keys():
     plt.figure(ikey)
     data   = history.history[ikey]
@@ -195,4 +187,13 @@ for ikey in history.history.keys():
     plt.title(ikey)
     plt.xlabel('epochs')
     plt.ylabel(ikey)
+
+'''
+plt.figure('Training Accuracy')
+train_accuracy = history.history['accuracy']
+epochs         = range(1, len(train_accuracy)+1)
+plt.plot(epochs, train_accuracy)
+plt.title('Training Accuracy')
+plt.xlabel('Epochs')
+plt.ylabel('Training Accuracy')
 '''
