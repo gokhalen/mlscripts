@@ -59,11 +59,11 @@ def plot_batch(data,fname,pred_label=None,plot_type='all'):
         plt.title(title)
 
 
-def make_stiffness(nnodex,nnodey,nsamples,homogeneous=True):
+def make_stiffness(nnodex,nnodey,nsamples,create_homo=True):
     # nnodex   = nodes/pixels in the x-direction
     # nnodey   = nodes/pixels in the y-direction
     # nsamples = number of examples to generate
-    # homogeneous -> if true,  then homogeneous examples are generated
+    # create_homo -> if true,  then homogeneous examples are generated
     #             -> if false, then homogeneous examples are not generated                
 
     # makes stiffness data
@@ -106,7 +106,7 @@ def make_stiffness(nnodex,nnodey,nsamples,homogeneous=True):
         # probability of getting inclusion
         pp = np.random.uniform(0.0,1.0)
         # add an inclusion if pp >=0.3 of if homogeneous = False
-        if (( pp >= 0.3) or (homogeneous == False)):
+        if (( pp >= 0.3) or ( create_homo == False)):
             stiffness_label[isample] = 1
             
             # note the inversion of x and y
@@ -145,7 +145,7 @@ def make_stiffness(nnodex,nnodey,nsamples,homogeneous=True):
     return (stiffness_data,stiffness_label,stiffness_center,stiffness_value)
 
 
-def generate_data(nnodex,nnodey,ntrain):
+def generate_data(nnodex,nnodey,ntrain,nval=None,ntest=None,create_homo=True):
      '''
      Creates 3 lists containing training_data,validation_data,test_data
      Each list contains tuples
@@ -160,12 +160,14 @@ def generate_data(nnodex,nnodey,ntrain):
              
      '''
      # don't let foll values go to zero. add 1
-     nval  = int(ntrain/3) + 1
-     ntest = int(ntrain/3) + 1
+     if ( nval == None):
+         nval  = int(ntrain/3) + 1
+     if ( ntest == None):
+         ntest = int(ntrain/3) + 1
      
-     training_data   = make_stiffness(nnodex,nnodey,ntrain)
-     validation_data = make_stiffness(nnodex,nnodey,nval)
-     test_data       = make_stiffness(nnodex,nnodey,ntest)
+     training_data   = make_stiffness(nnodex,nnodey,ntrain,create_homo)
+     validation_data = make_stiffness(nnodex,nnodey,nval,create_homo)
+     test_data       = make_stiffness(nnodex,nnodey,ntest,create_homo)
   
      return (training_data,validation_data,test_data)
  

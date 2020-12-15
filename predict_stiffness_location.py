@@ -10,8 +10,6 @@ Program to classify images of stiffness into two categories
 
 """
 
-
-
 import tensorflow as tf
 import numpy as np
 import matplotlib as mpl
@@ -57,7 +55,7 @@ cnn.add(tf.keras.layers.Flatten())
 # Step 4 - Full Connection
 cnn.add(tf.keras.layers.Dense(units=128, activation='relu'))
 # Step 5 - Output Layer - maybe make activation relu later
-cnn.add(tf.keras.layers.Dense(units=1))
+cnn.add(tf.keras.layers.Dense(units=2))
 
 # plot
 tf.keras.utils.plot_model(
@@ -76,18 +74,12 @@ cnn.summary()
 # Training the CNN on the Training set and evaluating it on the Test set
 # nhg - how does cnn.fit know that data has finished?
 #     - if I do 'for i in training_set' it keeps yielding forever
-history=cnn.fit(x = train_data[0], y = train_data[3],
-                validation_data = (valid_data[0],valid_data[3]),
+history=cnn.fit(x = train_data[0], y = train_data[2],
+                validation_data = (valid_data[0],valid_data[2]),
                 epochs = nepochs, callbacks=[early_stop_callback])
 
 # also check out: cnn.evaluate
 plotall(history)
 
-out   = cnn.predict(test_data[0]).ravel() # get prediction
-plt.figure('Absolute Error')
-plt.plot(abs(test_data[3]-out))
-plt.title('Absolute Error')
+out   = cnn.predict(test_data[0]) # get prediction
 
-plt.figure('Relative Error')
-plt.plot((test_data[3]-out)/(test_data[3]))
-plt.title('Relative Error')

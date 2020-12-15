@@ -21,11 +21,22 @@ from scriptutils import plot_batch, make_stiffness,generate_data,plotall
 from sklearn.metrics import confusion_matrix, accuracy_score
 
 
-nnodex,nnodey,ntrain=64,64,64
-nepochs = 32
+nnodex,nnodey,ntrain=64,64,512
+nepochs   = 512
+min_delta = 0.1
+patience  = 5
 
+
+# get data
 train_data,valid_data,test_data = generate_data(nnodex=nnodex,nnodey=nnodey,
                                                 ntrain=ntrain)
+
+# Earlystopping
+early_stop_callback = tf.keras.callbacks.EarlyStopping(monitor='loss', 
+                                                       min_delta=min_delta,
+                                                       patience=patience)
+
+
 
 # Initialising the CNN
 cnn = tf.keras.models.Sequential()
@@ -63,7 +74,7 @@ cnn.summary()
 #     - if I do 'for i in training_set' it keeps yielding forever
 history=cnn.fit(x = train_data[0], y = train_data[1],
                 validation_data = (valid_data[0],valid_data[1]),
-                epochs = nepochs)
+                epochs = nepochs, callbacks=[early_stop_callback])
 
 # also check out: cnn.evaluate
 plotall(history)
