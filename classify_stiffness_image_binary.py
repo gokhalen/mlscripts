@@ -18,19 +18,14 @@ import matplotlib as mpl
 import sys
 
 from scriptutils import plot_batch, make_stiffness,generate_data,plotall
-
-
-
+from sklearn.metrics import confusion_matrix, accuracy_score
 
 
 nnodex,nnodey,ntrain=64,64,64
-nepochs = 512
+nepochs = 32
 
 train_data,valid_data,test_data = generate_data(nnodex=nnodex,nnodey=nnodey,
                                                 ntrain=ntrain)
-
-
-
 
 # Initialising the CNN
 cnn = tf.keras.models.Sequential()
@@ -73,7 +68,16 @@ history=cnn.fit(x = train_data[0], y = train_data[1],
 # also check out: cnn.evaluate
 plotall(history)
 
-out = cnn.predict(test_data[0])     
+out   = cnn.predict(test_data[0])      # get prediction
+out   = out.ravel() > 0.5              # convert to boolean based on probabilty 0.5
+out   = out * 1.0                      # convert to integer
+
+plot_batch(test_data,' test ',pred_label=out)
+
+cm = confusion_matrix(test_data[1],out)
+ac = accuracy_score(test_data[1], out)
+print('confusion matrix=\n',cm)
+print('accuracy_score=',ac)
 
 '''
 plt.figure('Training Accuracy')

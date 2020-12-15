@@ -4,6 +4,8 @@
 
 Other ideas:
 
-# TODO: Add more than 1 inclusion scripts
+# TODO: Add more than 1 inclusion
 #       Confusion matrix
-#       Different values of stiffness
+#       Predict - stiffness values of inclusion
+#               - center and radius of inclusion
+#       classification: decide which region tumor falls into

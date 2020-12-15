@@ -9,7 +9,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 
-def plot_batch(data,fname,pred_label=None):
+def plot_batch(data,fname,pred_label=None,plot_type='all'):
     # plots one batch of training data and labels
     # data is a tuple containing (training_data,labels)
     # training_data has dims (batch_size,nnodex,nnodey,1)
@@ -18,21 +18,44 @@ def plot_batch(data,fname,pred_label=None):
     # data  - one batch (ndarray,labels)
     # fname - description of data to plot. 
     #         fname is used to create the title
+    # pred_label - predicted label by NN
+    # plot_type  - 'correct','incorrect','all'
+    #            - 'correct' plots all examples
+    #            - 'incorrect' plots only incorrectly labelled examples
+    #            - 'all' plots all examples
+    
+    # check if plot_type is in allowed types
+    assert (plot_type in ['all','correct','incorrect']),'plot_type should \
+    be one of "all" "correct" or "incorrect" '
+         
     
     batch_size = data[0].shape[0]
     nnodex     = data[0].shape[1]
     nnodey     = data[0].shape[2]
     label      = data[1]
     
+    # note the inversion of ycoord and xcoord
     ycoord,xcoord = np.indices((nnodex,nnodey))
-
-    for ii in range(batch_size):
+    
+    # create index lists of only the examples to plot
+    if ( plot_type == 'all'):
+        # get all indices using self comparison
+        idxlist = np.where(pred_label==pred_label)[0]
+        
+    if ( plot_type == 'correct'):
+        idxlist = np.where(pred_label == label)[0]
+        
+    if ( plot_type == 'incorrect'):
+        idxlist = np.where(pred_label != label)[0]
+        
+       
+    for ii in idxlist:
         title = fname+str(ii) +' label='+str(label[ii])
         if pred_label is not None:
             title = title + ' pred='+str(pred_label[ii])
         plt.figure(title)
         # breakpoint()
-        plt.pcolormesh(xcoord,ycoord,data[0][ii,:,:,0])
+        plt.pcolormesh(xcoord,ycoord,data[0][ii,:,:,0],shading='auto')
         plt.title(title)
 
 
