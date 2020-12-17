@@ -7,7 +7,62 @@ Created on Mon Dec 14 12:56:35 2020
 
 import numpy as np
 import matplotlib.pyplot as plt
+from sklearn.preprocessing import StandardScaler
 
+
+def feature_scaling_forward(data,sc=None):
+    # data - tuple generated from (make_stiffness)
+    # sc   - tuple of scalers to be used for each field in data
+    #      - if sc is none then a new scaler is computed
+    # returns - scaled data and the scalers used to scale
+    
+    # data[1] are labels which are 0 or 1. They are not scaled.
+    
+    oldshape = data[0].shape
+
+    if ( sc == None ):
+       scimg    = StandardScaler()
+       sclabel  = None
+       sccenter = StandardScaler()
+       scvalue  = StandardScaler()
+       scradius = StandardScaler()
+       
+       
+       # fitting requires a 2D array
+       scimg.fit(data[0].reshape(-1,1))
+       sccenter.fit(data[2].reshape(-1,1))
+       scvalue.fit(data[3].reshape(-1,1))
+       scradius.fit(data[4].reshape(-1,1))
+       
+    else:
+       scimg    = sc[0]
+       sclabel  = sc[1]
+       sccenter = sc[2]
+       scvalue  = sc[3]
+       scradius = sc[4]
+       
+    newdata0 = scimg.transform(data[0].reshape(-1,1)).reshape(oldshape)
+    # data 2 is a 2D array
+    newdata2 = sccenter.transform(data[2].reshape(-1,1)).reshape((-1,2))
+    newdata3 = scvalue.transform(data[3].reshape(-1,1)).reshape((-1,))
+    newdata4 = scradius.transform(data[4].reshape(-1,1)).reshape((-1,))
+    
+    newdata = (newdata0,data[1],newdata2,newdata3,newdata4)
+    
+    return (newdata,(scimg,sclabel,sccenter,scvalue,scradius))
+
+def feature_scaling_inverse(data,sc):
+    # inverse transforms features according to sc
+    oldshape = data[0].shape
+    newdata0 = sc[0].inverse_transform(data[0].reshape(-1,1)).reshape(oldshape)
+    # data 2 is a 2D array
+    newdata2 = sc[2].inverse_transform(data[2].reshape(-1,1)).reshape((-1,2))
+    newdata3 = sc[3].inverse_transform(data[3].reshape(-1,1)).reshape((-1,))
+    newdata4 = sc[4].inverse_transform(data[4].reshape(-1,1)).reshape((-1,))
+    
+    newdata = (newdata0,data[1],newdata2,newdata3,newdata4)
+    return newdata
+    
 
 def plot_batch(data,fname,pred_label=None,plot_type='all'):
     # plots one batch of training data and labels
@@ -40,7 +95,7 @@ def plot_batch(data,fname,pred_label=None,plot_type='all'):
     # create index lists of only the examples to plot
     if ( plot_type == 'all'):
         # get all indices using self comparison
-        idxlist = np.where(pred_label==pred_label)[0]
+        idxlist = np.arange(batch_size)
         
     if ( plot_type == 'correct'):
         idxlist = np.where(pred_label == label)[0]
@@ -67,7 +122,8 @@ def make_stiffness(nnodex,nnodey,nsamples,create_homo=True):
     #             -> if false, then homogeneous examples are not generated                
 
     # makes stiffness data
-    # returns a tuple (stiffness_data,stiffness_label,stiffness_center,stiffness_value)
+    # returns a tuple (stiffness_data,stiffness_label,stiffness_center,
+    #                  stiffness_value,stiffness_radius)
     # stiffness_data is a ndarray of shape (nsamples,nnodex,nnodey,1)
     #                it contains nsample stiffness images    
     #                the last 1 is preparation for handling displacement fields
@@ -80,7 +136,8 @@ def make_stiffness(nnodex,nnodey,nsamples,create_homo=True):
     #                  (-1,-1) if there is no inclusion
     # stiffness_value  a scalar containing the value of the stiffness 
     #                  between stfmin and stfmax
-    #                  -1 if there is no inclusion                  
+    #                  -1 if there is no inclusion
+    # stiffness_radius radius of the inclusion                
     
     stfback = 1.0
     stfmin  = 2.0
@@ -97,6 +154,7 @@ def make_stiffness(nnodex,nnodey,nsamples,create_homo=True):
     stiffness_label  = np.zeros((nsamples,),dtype='int64')
     stiffness_center = -1*np.ones((nsamples,2),dtype='int64')
     stiffness_value  = -1*np.ones((nsamples,))
+    stiffness_radius = -1*np.ones((nsamples,))
 
     for isample in range(nsamples):
         
@@ -136,13 +194,15 @@ def make_stiffness(nnodex,nnodey,nsamples,create_homo=True):
             kk[mask] = stfval
             stiffness_center[isample] = xcen1,ycen1
             stiffness_value[isample]  = stfval
+            stiffness_radius[isample] = rad
              
             
             
         kk = kk.reshape(nnodex,nnodey,1)
         stiffness_data[isample,...] = kk 
 
-    return (stiffness_data,stiffness_label,stiffness_center,stiffness_value)
+    return (stiffness_data,stiffness_label,stiffness_center,stiffness_value,
+            stiffness_radius)
 
 
 def generate_data(nnodex,nnodey,ntrain,nval=None,ntest=None,create_homo=True):
@@ -178,7 +238,14 @@ def plotall(history):
         plt.figure(ikey)
         data   = history.history[ikey]
         epochs = range(1,len(data)+1)
+        yscale = 'linear'
+        if 'loss' in ikey:
+            yscale = 'log'
         plt.plot(epochs,data)
+        plt.yscale(yscale)
+        plt.grid(yscale)
         plt.title(ikey)
         plt.xlabel('epochs')
         plt.ylabel(ikey)
+        plt.grid(True,which='both')
+        plt.savefig('plot'+ikey+'.png')

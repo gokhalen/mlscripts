@@ -7,6 +7,7 @@ Other ideas:
 # TODO: Add more than 1 inclusion
 #       Confusion matrix
 #       Predict - stiffness values of inclusion
-#               - center and radius of inclusion
+#               - center and **radius** of inclusion
 #       classification: decide which region tumor falls into
-#       modify plot_batch to plot incorrect/correct/all examples
+#       feature scaling
+       

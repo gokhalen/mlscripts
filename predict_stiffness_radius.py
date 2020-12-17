@@ -15,37 +15,31 @@ Program to classify images of stiffness into two categories
 import tensorflow as tf
 import numpy as np
 import matplotlib as mpl
+import matplotlib.pyplot as plt
 import sys
 
-from scriptutils import plot_batch, make_stiffness,generate_data,plotall,\
-                        feature_scaling_forward
-from sklearn.metrics import confusion_matrix, accuracy_score
+from scriptutils import plot_batch, make_stiffness,generate_data,plotall
 
 
 nnodex,nnodey=64,64
-ntrain,nval,ntest=1024,205,205
-# ntrain,nval,ntest=32,32,32
-
+ntrain,nval,ntest=512,64,32
 nepochs   = 512
-min_delta = 1E-4
-patience  = 10
+min_delta = 0
+patience  = 45
+
 
 # get data
 train_data,valid_data,test_data = generate_data(nnodex=nnodex,nnodey=nnodey,
                                                 ntrain=ntrain,
-                                                nval =nval,
-                                                ntest=ntest,
-                                                create_homo=True)
+                                                nval  = nval,
+                                                ntest = ntest,
+                                                create_homo=False)
 
 # Earlystopping
-early_stop_callback = tf.keras.callbacks.EarlyStopping(monitor='val_loss', 
+early_stop_callback = tf.keras.callbacks.EarlyStopping(monitor='loss', 
                                                        min_delta=min_delta,
                                                        patience=patience)
 
-
-train_data,scalers = feature_scaling_forward(train_data,None)
-valid_data,scalers = feature_scaling_forward(valid_data,scalers)
-test_data,scalers  = feature_scaling_forward(test_data,scalers)
 
 
 # Initialising the CNN
@@ -62,8 +56,8 @@ cnn.add(tf.keras.layers.MaxPool2D(pool_size=2, strides=2))
 cnn.add(tf.keras.layers.Flatten())
 # Step 4 - Full Connection
 cnn.add(tf.keras.layers.Dense(units=128, activation='relu'))
-# Step 5 - Output Layer
-cnn.add(tf.keras.layers.Dense(units=1, activation='sigmoid'))
+# Step 5 - Output Layer - maybe make activation relu later
+cnn.add(tf.keras.layers.Dense(units=1))
 
 # plot
 tf.keras.utils.plot_model(
@@ -71,11 +65,10 @@ tf.keras.utils.plot_model(
         rankdir='TB', expand_nested=False, dpi=96
     )
 
-
 # Part 3 - Training the CNN
 
 # Compiling the CNN
-cnn.compile(optimizer = 'adam', loss = 'binary_crossentropy', metrics = ['accuracy'])
+cnn.compile(optimizer = 'adam', loss ='mse')
 
 # Summary
 cnn.summary()
@@ -83,30 +76,18 @@ cnn.summary()
 # Training the CNN on the Training set and evaluating it on the Test set
 # nhg - how does cnn.fit know that data has finished?
 #     - if I do 'for i in training_set' it keeps yielding forever
-history=cnn.fit(x = train_data[0], y = train_data[1],
-                validation_data = (valid_data[0],valid_data[1]),
-                epochs = nepochs, callbacks=[early_stop_callback])
+history=cnn.fit(x = train_data[0], y = train_data[4],
+                validation_data = (valid_data[0],valid_data[4]),
+                epochs = nepochs)
 
 # also check out: cnn.evaluate
 plotall(history)
 
-out   = cnn.predict(test_data[0])      # get prediction
-out   = out.ravel() > 0.5              # convert to boolean based on probabilty 0.5
-out   = out * 1.0                      # convert to integer
+out   = cnn.predict(test_data[0]).ravel() # get prediction
+plt.figure('Absolute Error')
+plt.plot(abs(test_data[4]-out))
+plt.title('Absolute Error')
 
-# plot_batch(test_data,' test ',pred_label=out)
-
-cm = confusion_matrix(test_data[1],out)
-ac = accuracy_score(test_data[1], out)
-print('confusion matrix=\n',cm)
-print('accuracy_score=',ac)
-
-'''
-plt.figure('Training Accuracy')
-train_accuracy = history.history['accuracy']
-epochs         = range(1, len(train_accuracy)+1)
-plt.plot(epochs, train_accuracy)
-plt.title('Training Accuracy')
-plt.xlabel('Epochs')
-plt.ylabel('Training Accuracy')
-'''
+plt.figure('Relative Error')
+plt.plot((test_data[4]-out)/(test_data[4]))
+plt.title('Relative Error')
