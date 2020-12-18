@@ -150,7 +150,7 @@ def make_stiffness(nnodex,nnodey,nsamples,create_homo=True):
     
     # generate training data - make inclusion stiffness a variable later
     # background stiffness is stfback
-    stiffness_data   = stfback*np.ones((nsamples,nnodex,nnodey,1),dtype='float64')  
+    stiffness_data   = stfback*np.ones((nsamples,nnodey,nnodex,1),dtype='float64')  
     stiffness_label  = np.zeros((nsamples,),dtype='int64')
     stiffness_center = -1*np.ones((nsamples,2),dtype='int64')
     stiffness_value  = -1*np.ones((nsamples,))
@@ -159,7 +159,7 @@ def make_stiffness(nnodex,nnodey,nsamples,create_homo=True):
     for isample in range(nsamples):
         
         # set background stiffness
-        kk = stfback*np.ones((nnodex,nnodey))
+        kk = stfback*np.ones((nnodey,nnodex))
         
         # probability of getting inclusion
         pp = np.random.uniform(0.0,1.0)
@@ -167,8 +167,7 @@ def make_stiffness(nnodex,nnodey,nsamples,create_homo=True):
         if (( pp >= 0.3) or ( create_homo == False)):
             stiffness_label[isample] = 1
             
-            # note the inversion of x and y
-            ycoord,xcoord = np.indices((nnodex,nnodey))
+            ycoord,xcoord = np.indices((nnodey,nnodex))
             rad       = int(min(nnodex,nnodey)*np.random.uniform(0.05,0.1))
             # radlist.append(rad)
             if rad == 0:
@@ -178,8 +177,8 @@ def make_stiffness(nnodex,nnodey,nsamples,create_homo=True):
             xcen1 = np.random.choice(xcenlist)
             ycen1 = np.random.choice(ycenlist)
             
-            xcen  = xcen1*np.ones((nnodex,nnodey))
-            ycen  = ycen1*np.ones((nnodex,nnodey))
+            xcen  = xcen1*np.ones((nnodey,nnodex))
+            ycen  = ycen1*np.ones((nnodey,nnodex))
             
             xdist = (xcen - xcoord)**2
             ydist = (ycen - ycoord)**2
@@ -195,10 +194,9 @@ def make_stiffness(nnodex,nnodey,nsamples,create_homo=True):
             stiffness_center[isample] = xcen1,ycen1
             stiffness_value[isample]  = stfval
             stiffness_radius[isample] = rad
-             
             
             
-        kk = kk.reshape(nnodex,nnodey,1)
+        kk = kk.reshape(nnodey,nnodex,1)
         stiffness_data[isample,...] = kk 
 
     return (stiffness_data,stiffness_label,stiffness_center,stiffness_value,
@@ -243,9 +241,25 @@ def plotall(history,outputdir):
             yscale = 'log'
         plt.plot(epochs,data)
         plt.yscale(yscale)
-        plt.grid(yscale)
         plt.title(ikey)
         plt.xlabel('epochs')
         plt.ylabel(ikey)
         plt.grid(True,which='both')
         plt.savefig(outputdir+'plot'+ikey+'.png')
+
+
+'''
+import numpy as np
+import matplotlib.pyplot as plt
+nnodex = 64 
+nnodey = 64
+ycoord,xcoord = np.indices((nnodex,nnodey))
+for ii in range(6):
+    print(ii)
+    plt.figure(str(ii))
+    plt.pcolormesh(xcoord,ycoord,train_data[0][ii,:,:,0],shading='auto',vmin=1.0,vmax=5.0)
+    plt.colorbar()
+    ax = plt.gca()
+    ax.set_aspect('equal')
+    plt.savefig('sample'+str(ii)+'.png')
+'''

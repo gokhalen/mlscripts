@@ -88,9 +88,7 @@ out   = scalers[4].inverse_transform(out.reshape(-1,1)).reshape((-1,))
 
 true = scalers[4].inverse_transform(test_data[4].reshape(-1,1)).reshape((-1,))
 
-plt.figure('Absolute Error')
-plt.plot(abs(true-out))
-plt.title('Absolute Error')
+
 
 plt.figure('Relative Error')
 plt.plot((true-out)/(true))
