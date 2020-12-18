@@ -10,4 +10,6 @@ Other ideas:
 #               - center and **radius** of inclusion
 #       classification: decide which region tumor falls into
 #       feature scaling
+#       predict stiffness,radius,and center
+#       predict binary (yes/no) and stiffness,radius,and center
        

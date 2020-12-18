@@ -231,7 +231,7 @@ def generate_data(nnodex,nnodey,ntrain,nval=None,ntest=None,create_homo=True):
   
      return (training_data,validation_data,test_data)
  
-def plotall(history):
+def plotall(history,outputdir):
     # plot everything in history
     # history is returned by model.fit
     for ikey in history.history.keys():
@@ -248,4 +248,4 @@ def plotall(history):
         plt.xlabel('epochs')
         plt.ylabel(ikey)
         plt.grid(True,which='both')
-        plt.savefig('plot'+ikey+'.png')
+        plt.savefig(outputdir+'plot'+ikey+'.png')
