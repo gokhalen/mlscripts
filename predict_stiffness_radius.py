@@ -24,8 +24,8 @@ from scriptutils import plot_batch, make_stiffness,generate_data,plotall
 nnodex,nnodey=64,64
 ntrain,nval,ntest=512,64,32
 nepochs   = 512
-min_delta = 0
-patience  = 45
+min_delta = 1E-4
+patience  = 10
 
 
 # get data

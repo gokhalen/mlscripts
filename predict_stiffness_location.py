@@ -20,15 +20,17 @@ from scriptutils import plot_batch, make_stiffness,generate_data,plotall,\
                         feature_scaling_forward,feature_scaling_inverse
 
 
-outputdir=r"G:\\Work\\Production\\circle_id\\Location2\\"
+outputdir=r"G:\\Work\\Production\\circle_id\\Location\\"
 kerasdir='model_location.keras.save'
 
 
-nnodex,nnodey=32,64
-ntrain,nval,ntest=1024,205,205
+nnodex,nnodey=32,128
+ntrain,nval,ntest=1024,205,1024
 nepochs   = 512
 min_delta = 1E-4
 patience  = 10
+
+# Early stopping callback removed
 
 # get data
 train_data,valid_data,test_data = generate_data(nnodex=nnodex,nnodey=nnodey,
@@ -84,7 +86,8 @@ else:
     #     - if I do 'for i in training_set' it keeps yielding forever
     history=cnn.fit(x = train_data[0], y = train_data[2],
                     validation_data = (valid_data[0],valid_data[2]),
-                    epochs = nepochs, callbacks=[early_stop_callback])
+                    epochs = nepochs)
+#    ,callbacks=[early_stop_callback]
     
     # also check out: cnn.evaluate
     plotall(history,outputdir)
@@ -97,16 +100,32 @@ out     = cnn.predict(test_data[0]) # get prediction
 out     = scalers[2].inverse_transform(out.reshape((-1,1))).reshape((-1,2))
 correct = scalers[2].inverse_transform(test_data[2].reshape((-1,1))).reshape((-1,2))
 
+radinvtr = scalers[-1].inverse_transform(train_data[-1].reshape(-1,)).reshape((-1,))
+
 plt.figure('Error')
 xdata  = np.arange(1,ntest+1)
 delta  = (correct-out)
 ydatax = delta[:,0]
 ydatay = delta[:,1]
-plt.plot(xdata,ydatax)
-plt.plot(xdata,ydatay)
+plt.plot(xdata,ydatax,linewidth='1')
+plt.plot(xdata,ydatay,linewidth='1')
 plt.grid(True,which='both')
 plt.xlabel('Test example number')
 plt.ylabel('Error in center location in pixels')
 plt.legend(['Error in x coordinate','Error in y coordinate'])
 plt.title('Error in x and y coordinate (pixels)')
 plt.savefig(outputdir+'plotabserror.png')
+
+plt.figure('Percentage Error')
+xdata  = np.arange(1,ntest+1)
+delta  = (correct-out)
+ydatax = delta[:,0]/nnodex
+ydatay = delta[:,1]/nnodey
+plt.plot(xdata,ydatax,linewidth='1')
+plt.plot(xdata,ydatay,linewidth='1')
+plt.grid(True,which='both')
+plt.xlabel('Test example number')
+plt.ylabel('Relative error in center location')
+plt.legend(['Relative Error in x coordinate','Relative Error in y coordinate'])
+plt.title('Relative Error in x and y coordinate')
+plt.savefig(outputdir+'plotrelerror.png')

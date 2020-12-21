@@ -10,25 +10,21 @@ Program to classify images of stiffness into two categories
 
 """
 
-
-
 import tensorflow as tf
 import numpy as np
 import matplotlib as mpl
+import matplotlib.pyplot as plt
 import sys,os
 
 from scriptutils import plot_batch, make_stiffness,generate_data,plotall,\
                         feature_scaling_forward,feature_scaling_inverse
-from sklearn.metrics import confusion_matrix, accuracy_score
 
-# double backslashes for escape codes
-outputdir=r"G:\\Work\\Production\\circle_id\\Binary\\"
-kerasdir='model_binary.keras.save'
+
+outputdir=r"G:\\Work\\Production\\circle_id\\Location_only_y\\"
+kerasdir='model_location.keras.save'
 
 nnodex,nnodey=32,128
 ntrain,nval,ntest=1024,205,1024
-# ntrain,nval,ntest=32,32,32
-
 nepochs   = 512
 min_delta = 1E-4
 patience  = 10
@@ -36,26 +32,24 @@ patience  = 10
 # get data
 train_data,valid_data,test_data = generate_data(nnodex=nnodex,nnodey=nnodey,
                                                 ntrain=ntrain,
-                                                nval =nval,
-                                                ntest=ntest,
-                                                create_homo=True)
+                                                nval  = nval,
+                                                ntest = ntest,
+                                                create_homo=False)
 
+# Feature Scaling
 train_data,scalers = feature_scaling_forward(train_data,None)
 valid_data,scalers = feature_scaling_forward(valid_data,scalers)
 test_data,scalers  = feature_scaling_forward(test_data,scalers)
-    
 
 if (os.path.exists(outputdir+kerasdir)):
     print('Old model exists...loading old model')
     cnn=tf.keras.models.load_model(outputdir+kerasdir)
-   
+    
 else:
-     # create new model
-     # Earlystopping
-    early_stop_callback = tf.keras.callbacks.EarlyStopping(monitor='val_loss', 
+    # Earlystopping
+    early_stop_callback = tf.keras.callbacks.EarlyStopping(monitor='loss', 
                                                            min_delta=min_delta,
                                                            patience=patience)
-    
     # Initialising the CNN
     cnn = tf.keras.models.Sequential()
     # Step 1 - Convolution
@@ -70,49 +64,62 @@ else:
     cnn.add(tf.keras.layers.Flatten())
     # Step 4 - Full Connection
     cnn.add(tf.keras.layers.Dense(units=128, activation='relu'))
-    # Step 5 - Output Layer
-    cnn.add(tf.keras.layers.Dense(units=1, activation='sigmoid'))
+    # Step 5 - Output Layer - maybe make activation relu later
+    cnn.add(tf.keras.layers.Dense(units=1))
     
     # plot
     tf.keras.utils.plot_model(
             cnn, to_file=outputdir+'model.png', show_shapes=True, show_layer_names=True,
-            rankdir='TB', expand_nested=False, dpi=96
+            rankdir='TB', expand_nested=False, dpi=256
         )
-    
     
     # Part 3 - Training the CNN
     
     # Compiling the CNN
-    cnn.compile(optimizer = 'adam', loss = 'binary_crossentropy', metrics = ['accuracy'])
-    
+    cnn.compile(optimizer = 'adam', loss ='mse')
     
     # Training the CNN on the Training set and evaluating it on the Test set
     # nhg - how does cnn.fit know that data has finished?
     #     - if I do 'for i in training_set' it keeps yielding forever
-    history=cnn.fit(x = train_data[0], y = train_data[1],
-                    validation_data = (valid_data[0],valid_data[1]),
-                    epochs = nepochs, callbacks=[early_stop_callback])
+    history=cnn.fit(x = train_data[0], y = train_data[2][:,1],
+                    validation_data = (valid_data[0],valid_data[2][:,1]),
+                    epochs = nepochs,callbacks=[early_stop_callback])
     
     # also check out: cnn.evaluate
     plotall(history,outputdir)
-
     cnn.save(outputdir+kerasdir)
-    
-    
+
 # Summary
 cnn.summary()
 
+out  = cnn.predict(test_data[0]) # get prediction
+out  = np.hstack((out,out))
 
-out   = cnn.predict(test_data[0])      # get prediction
-out   = out.ravel() > 0.5              # convert to boolean based on probabilty 0.5
-out   = out * 1.0                      # convert to integer
+out     = scalers[2].inverse_transform(out.reshape((-1,1))).reshape((-1,2))
+correct = scalers[2].inverse_transform(test_data[2].reshape((-1,1))).reshape((-1,2))
 
-# plot_batch(test_data,' test ',pred_label=out)
+plt.figure('Error')
+xdata  = np.arange(1,ntest+1)
+delta  = (correct-out)
+ydatay = delta[:,1]
+plt.plot(xdata,ydatay,linewidth='1')
+plt.grid(True,which='both')
+plt.xlabel('Test example number')
+plt.ylabel('Error in center location in pixels')
+plt.legend(['Error in x coordinate'])
+plt.title('Error in x coordinate (pixels)')
+plt.savefig(outputdir+'plotabserror.png')
 
-cm = confusion_matrix(test_data[1],out)
-ac = accuracy_score(test_data[1], out)
-print('confusion matrix=\n',cm)
-print('accuracy_score=',ac)
-
-# inverse transform train_data
-train_data = feature_scaling_inverse(train_data,scalers)
+plt.figure('Percentage Error')
+xdata  = np.arange(1,ntest+1)
+delta  = (correct-out)
+ydatax = delta[:,0]/nnodex
+ydatay = delta[:,1]/nnodey
+plt.plot(xdata,ydatax,linewidth='1')
+plt.plot(xdata,ydatay,linewidth='1')
+plt.grid(True,which='both')
+plt.xlabel('Test example number')
+plt.ylabel('Relative error in center location')
+plt.legend(['Relative Error in x coordinate','Relative Error in y coordinate'])
+plt.title('Relative Error in x and y coordinate')
+plt.savefig(outputdir+'plotrelerror.png')

@@ -18,6 +18,11 @@ def feature_scaling_forward(data,sc=None):
     
     # data[1] are labels which are 0 or 1. They are not scaled.
     
+    # if the x and y coordinates of the image are drastically different
+    # then they need to be feature scaled separately
+    # in other words, if the picture is badly scaled. 
+    
+    
     oldshape = data[0].shape
 
     if ( sc == None ):
@@ -168,7 +173,8 @@ def make_stiffness(nnodex,nnodey,nsamples,create_homo=True):
             stiffness_label[isample] = 1
             
             ycoord,xcoord = np.indices((nnodey,nnodex))
-            rad       = int(min(nnodex,nnodey)*np.random.uniform(0.05,0.1))
+            rad       = int(min(nnodex,nnodey)*np.random.uniform(0.05,0.10))
+            
             # radlist.append(rad)
             if rad == 0:
                 sys.exit('Radius equals zero')
