@@ -28,6 +28,8 @@ nepochs   = 512
 min_delta = 1E-4
 patience  = 10
 
+# callbacks removed
+
 outputdir=r"G:\\Work\\Production\\circle_id\\Stiffval\\"
 kerasdir='model_stiffval.keras.save'
 
@@ -89,7 +91,7 @@ else:
     #     - if I do 'for i in training_set' it keeps yielding forever
     history=cnn.fit(x = train_data[0], y = train_data[3],
                     validation_data = (valid_data[0],valid_data[3]),
-                    epochs = nepochs, callbacks=[early_stop_callback])
+                    epochs = nepochs)
     
     # also check out: cnn.evaluate
     plotall(history,outputdir)
@@ -105,12 +107,32 @@ out     = scalers[3].inverse_transform(out.reshape((-1,1))).reshape((-1,))
 correct = scalers[3].inverse_transform(test_data[3].reshape((-1,1))).reshape((-1,))
 # inverse transform out and correct stiffness
 
-sys.exit()
+plt.figure('Error')
+xdata  = np.arange(1,ntest+1)
+delta  = (correct-out)
+plt.plot(xdata,delta,linewidth='1')
+plt.grid(True,which='both')
+plt.xlabel('Test example number')
+plt.ylabel('Error in stiffness value')
+plt.title('Error in stiffness value')
+plt.savefig(outputdir+'plotabserror.png')
 
-plt.figure('Absolute Error')
-plt.plot(abs(test_data[3]-out))
-plt.title('Absolute Error')
+plt.figure('Correct and predicted stiffness')
+xdata  = np.arange(1,ntest+1)
+plt.plot(xdata,correct,linewidth='1')
+plt.plot(xdata,out,linewidth='1')
+plt.grid(True,which='both')
+plt.xlabel('Test example number')
+plt.ylabel('Stiffness')
+plt.legend(['Correct stiffness','Predicted stiffness'])
+plt.title('Correct and predicted stiffness')
+plt.savefig(outputdir+'plotcomparison.png')
 
-plt.figure('Relative Error')
-plt.plot((test_data[3]-out)/(test_data[3]))
-plt.title('Relative Error')
+plt.figure('Relative error in stiffness')
+xdata  = np.arange(1,ntest+1)
+plt.plot(xdata,delta/correct,linewidth='1')
+plt.grid(True,which='both')
+plt.xlabel('Test example number')
+plt.ylabel('Relative error in stiffness')
+plt.title('Relative error in stiffness')
+plt.savefig(outputdir+'plotrelcomparison.png')
