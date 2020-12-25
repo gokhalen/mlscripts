@@ -34,13 +34,21 @@ def get_data(prefix,nelemx,nelemy,ntrain,nvalid,ntest):
     # prefix is the prefix of the directories which contain training validation and test data
     # ntrain,nvalid,ntest are integers and should sum up to less than the number of files
     # returned by glob
+    # train_data is a namedtuple with four components image,label,center,value,radius
+    
     train_data,valid_data,test_data = None,None,None
-    gg = glob.glob(f'{prefix}*')  # assume that there are no files straring with prefiix, only directories
+    gg = glob.glob(f'{prefix}*')  # assume that there are no files straring with prefix, only directories
     ntotal = len(gg)
     assert (ntotal >= (ntrain+nvalid+ntest)),'Number of examples not sufficient'
     for ii, dirname in enumerate(gg):
         print(dirname,ii)
     return train_data,valid_data,test_data
+
+def forward_scale_data():
+    pass
+
+def inverse_scale_data():
+    pass
 
 def define_cnn():
     ndim = 2 # number of displacement components.
