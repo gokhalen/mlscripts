@@ -1,5 +1,6 @@
 0) Check if classification is being carried out correctly
 2) Compute percentages for training examples and total examples separately
+3) Let mlsetup only generate examples. do not split into ntrain/nvalid/ntest
 
 
 Other ideas:

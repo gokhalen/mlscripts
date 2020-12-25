@@ -102,9 +102,9 @@ def getargs():
     
     args = parser.parse_args()
 
-    # if number of validation and test examples are not provided then create them
-    if (args.nvalid == None): args.nvalid = int(0.3*args.ntrain); 
-    if (args.ntest  == None): args.ntest  = int(0.3*args.ntrain); 
+    # for now, we're skipping creating nvalid and ntest and letting the actual ML program handle splitting into train,valid and test 
+    if (args.nvalid == None): args.nvalid = int(0.0*args.ntrain); 
+    if (args.ntest  == None): args.ntest  = int(0.0*args.ntrain); 
 
     args.ntotal  = args.ntrain + args.nvalid + args.ntest
 
@@ -115,7 +115,11 @@ def getargs():
         args.nlabel    = args.nclassx*args.nclassy + 1
         args.nminexamp = (args.nlabel)*args.nclassmin 
         assert( args.ntrain > args.nminexamp ),f'Number of training examples {args.ntrain} must exceed {args.nminexamp}, computed on basis of minimum number of examples per class'
-        
+
+    # save parameters passed to mlsetup
+    with open('mlargs.json.out','w') as fout:
+        json.dump(vars(args),fout,indent=4)
+
     return args
 
 class FyPyArgs():
@@ -414,7 +418,6 @@ if __name__ == '__main__':
     if (args.solve == 'True'):
         for iexample,dd in enumerate(outlist):
              dirname,inputname,outputname,labelname = make_file_names(args,iexample)
-             
              print(f'Solving training example {iexample+1} of {args.ntotal} {args.problemtype} classification')
              tsolve = Timer('Solve timer',verbose=0)
              with tsolve:
@@ -432,4 +435,4 @@ if __name__ == '__main__':
              print(f'Solved example {iexample+1} of {args.ntotal} in {tsolve.elapsed:.2f}s')
              
                                    
-### Delete this ......
+

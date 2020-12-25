@@ -22,14 +22,14 @@ from scriptutils import plot_batch, make_stiffness,generate_data,plotall,\
 from sklearn.metrics import confusion_matrix, accuracy_score
 
 # double backslashes for escape codes
-outputdir=r"G:\\Work\\Production\\circle_id\\Binary\\"
+outputdir=r"G:\\Work\\Misc\\BinaryClass\\"
 kerasdir='model_binary.keras.save'
 
 nnodex,nnodey=32,128
 ntrain,nval,ntest=1024,205,1024
 # ntrain,nval,ntest=32,32,32
 
-nepochs   = 512
+nepochs   = 2
 min_delta = 1E-4
 patience  = 10
 
@@ -64,7 +64,7 @@ else:
     # Step 2 - Pooling
     cnn.add(tf.keras.layers.MaxPool2D(pool_size=2, strides=2))
     # Adding a second convolutional layer
-    cnn.add(tf.keras.layers.Conv2D(filters=32, kernel_size=3, activation='relu'))
+    cnn.add(tf.keras.layers.Conv2D(filters=64, kernel_size=3, activation='relu'))
     cnn.add(tf.keras.layers.MaxPool2D(pool_size=2, strides=2))
     # Step 3 - Flattening
     cnn.add(tf.keras.layers.Flatten())
