@@ -1,6 +1,6 @@
 0) Check if classification is being carried out correctly
 2) Compute percentages for training examples and total examples separately
-
+4) modify mlsetup to generate data with no homogneous examples
 
 Other ideas:
 

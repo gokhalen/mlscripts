@@ -1,7 +1,6 @@
 0) Check if classification is being carried out correctly
 2) Compute percentages for training examples and total examples separately
-3) Let mlsetup only generate examples. do not split into ntrain/nvalid/ntest
-
+4) modify mlsetup to generate data with no homogneous examples - check if setting nhomo to zero will do this
 
 Other ideas:
 
