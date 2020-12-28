@@ -5,6 +5,7 @@ import shutil
 import json
 import random
 import sys
+import numpy as np
 
 from timerit import Timer
 from collections import Counter
@@ -75,12 +76,13 @@ def getargs():
 
 
     parser.add_argument('--ninc',help='number of inclusions',required=False,type=int,default=1)
-    parser.add_argument('--rmin',help='lower bound on inclusion radius',required=False,type=float,default=0.7)
-    parser.add_argument('--rmax',help='lower bound on inclusion radius',required=False,type=float,default=1.0)
+    parser.add_argument('--rmin',help='lower bound on inclusion radius',required=False,type=float,default=0.05)
+    parser.add_argument('--rmax',help='lower bound on inclusion radius',required=False,type=float,default=0.15)
     parser.add_argument('--nelemx',help='number of elements in the x-direction',required=False,type=int,default=16)
     parser.add_argument('--nelemy',help='number of elements in the y-direction',required=False,type=int,default=16)
     parser.add_argument('--length',help='length of the domain in x direction',required=False,type=float,default=1.0)
     parser.add_argument('--breadth',help='length of the domain in y direction',required=False,type=float,default=1.0)
+    
     # total number of classes is nclass=nclassx*nclassy + 1 (for homogeneous)
     parser.add_argument('--nclassx',help='number of classes to classify into (in x direction)',required=False,type=int,default=1)
     parser.add_argument('--nclassy',help='number of classes to classify into (in y direction)',required=False,type=int,default=1)
@@ -92,10 +94,9 @@ def getargs():
     parser.add_argument('--ntrain',help='number of training   examples to generate',required=False,type=int,default=16)
     parser.add_argument('--nvalid',help='number of validation examples to generate',required=False,type=int)
     parser.add_argument('--ntest', help='number of test examples to generate',      required=False,type=int)
-
     parser.add_argument('--nhomo',help='number of homogeneous examples to generate',required=False,type=int,default=4)
     parser.add_argument('--nclassmin',help='minimum number of examples in each class',required=False,type=int,default=2)
-
+    parser.add_argument('--shift',help='shift for numbering',required=False,type=int,default=0)
     
     # system arguments
     parser.add_argument('--clean',help='delete previous data',required=False,type=str,default='False')
@@ -116,6 +117,17 @@ def getargs():
         args.nminexamp = (args.nlabel)*args.nclassmin 
         assert( args.ntrain > args.nminexamp ),f'Number of training examples {args.ntrain} must exceed {args.nminexamp}, computed on basis of minimum number of examples per class'
 
+
+    # check that the inclusion specified, is big enough to include atleast 2 nodes in the x and y direction
+    # number of nodes in rmin in x and y direction
+    refl   = min(args.length,args.breadth)  # reference length
+    rmin   = refl*args.rmin
+    nrminx = rmin*(args.nelemx/args.length)
+    nrminy = rmin*(args.nelemy/args.breadth)
+    
+    assert ( int(min(nrminx,nrminy)) > 1 ),'Not enough nodes captured in inclusion specified. Increase nelemx,nelemy,rmin,rmax as appropriate'
+
+    breakpoint()
     # save parameters passed to mlsetup
     with open('mlargs.json.out','w') as fout:
         json.dump(vars(args),fout,indent=4)
@@ -248,9 +260,9 @@ def generate_multiclass_training_parameters(args):
                     # second example at a random point in each cell of the training grid
                     xmin = dx*iclassx; xmax = (dx*iclassx) + dx
                     ymin = dy*iclassy; ymax = (dy*iclassy) + dy
-                    xcen = random.uniform(xmin,xmax)
-                    ycen = random.uniform(ymin,ymax)
-                    rad  = min(dx/2.0,dy/2.0)*0.6*random.uniform(0.6,1.0)
+                    xcen = np.random.uniform(xmin,xmax)
+                    ycen = np.random.uniform(ymin,ymax)
+                    rad  = min(dx/2.0,dy/2.0)*0.6*np.random.uniform(0.6,1.0)
 
                 if ( xcen >= args.length):
                     print(f'xcen out of range in {idx=}')
@@ -308,24 +320,19 @@ def make_label(args,centers,dd):
 
 def generate_random(args):
     # generates a random dictionary of parameters
-    dd = {}
-    
-    dx   = args.length  / args.nclassx
-    dy   = args.breadth / args.nclassy
-    rad  = min(dx/2.0,dy/2.0)*0.6
-    
+    dd    = {} 
     dd['length']  = args.length
     dd['breadth'] = args.breadth
     dd['nelemx']  = args.nelemx
     dd['nelemy']  = args.nelemy
-    dd['stf']     = 'inclusion'
+    dd['stftype'] = 'inclusion'
     dd['bctype']  = 'trac'
-    dd['ninc']    = args.ninc
-    dd['rmin']    = args.rmin
-    dd['rmax']    = args.rmax
-    dd['radius']  = random.uniform(rad*args.rmin,rad*args.rmax)
-    dd['xcen']    = random.uniform(0.0,args.length)
-    dd['ycen']    = random.uniform(0.0,args.breadth)
+    dd['radii']   =  [np.random.uniform(rmin,rmax)]
+
+    # make sure the center of the inclusion is inside the domain
+    xcen          = np.random.uniform(0.0,args.length)
+    ycen          = np.random.uniform(0.0,args.breadth)
+    
     dd['stfmin']  = args.stfmin
     dd['nu']      = args.nu
     dd['nclassx'] = args.nclassx
@@ -345,20 +352,22 @@ def generate_random_multiclass(args):
     return dd
 
 def make_file_names(args,idx):
-    if ( idx < args.ntrain):
+    '''
+    if ( idx < args.ntrain + args.shift):
         dirname     = f'{args.prefix}' + '_train'  + str(idx)+'/'
 
-    if ( args.ntrain <= idx < args.ntrain + args.nvalid):
+    if ( args.ntrain <= idx < args.ntrain + args.nvalid + args.shift):
         dirname     = f'{args.prefix}' + '_valid'  + str(idx)+'/'
 
     if ( (args.ntrain + args.nvalid) <= idx < args.ntotal):
         dirname     = f'{args.prefix}' + '_test'  + str(idx)+'/'
-        
+    '''
+    dirname     = f'{args.prefix}' + str(idx)+'/'
     inputname   = f'input'  + str(idx) + '.json.in'
     outputname  = f'output' + str(idx) + '.json.out'
-    labelname   = f'{dirname}'+f'mlinfo'  + str(idx) + '.json.in'
+    mlinfoname  = f'{dirname}'+f'mlinfo'  + str(idx) + '.json.in'
     
-    return dirname,inputname,outputname,labelname
+    return dirname,inputname,outputname,mlinfoname
  
 if __name__ == '__main__':
     
@@ -378,29 +387,21 @@ if __name__ == '__main__':
 
     if (args.generate == 'True'):
         for iexample,argdict in enumerate(outlist):
-            dirname,inputname,outputname,labelname = make_file_names(args,iexample)
+            dirname,inputname,outputname,mlinfoname = make_file_names(args,iexample+args.shift)
             
             print(f'Creating training inputfiles for example {iexample+1} of {args.ntotal} {args.problemtype} classification')
             mesh2d = FyPyMesh(inputdir=dirname,outputdir=dirname)
             os.mkdir(dirname)
             mesh2d.create_mesh_2d(**argdict)
             mesh2d.json_dump(filename=inputname)
-            mesh2d.preprocess(str(iexample))
+            mesh2d.preprocess(str(iexample+args.shift))
             # dump label
             mlinfodir = {}
             mlinfodir['label']    = labels[iexample]
             mlinfodir['category'] = category[iexample]
             mlinfodir.update(argdict)
-            
-            '''
-            mlinfodir['xcen']     = argdict['xcen']
-            mlinfodir['ycen']     = argdict['ycen']
-            mlinfodir['radius']   = argdict['radius']
-            mlinfodir['length']   = argdict['length']
-            mlinfodir['breadth']  = argdict['breadth']
-            mlinfodir['nclassx']  = argdict['length']
-            '''
 
+            # some checks
             if ( argdict['xcen'] >= args.length):
                 print(f'xcen out of range in {iexample=}')
 
@@ -412,12 +413,12 @@ if __name__ == '__main__':
                     print(f'Invalid homogeneous entry at {iexample=}')
 
             # dump machine learning info
-            with open(labelname,'x') as fout:
+            with open(mlinfoname,'x') as fout:
                 json.dump(mlinfodir,fout,indent=4)
 
     if (args.solve == 'True'):
-        for iexample,dd in enumerate(outlist):
-             dirname,inputname,outputname,labelname = make_file_names(args,iexample)
+        for iexample in range(args.ntotal):
+             dirname,inputname,outputname,mlinfoname = make_file_names(args,iexample+args.shift)
              print(f'Solving training example {iexample+1} of {args.ntotal} {args.problemtype} classification')
              tsolve = Timer('Solve timer',verbose=0)
              with tsolve:
@@ -431,7 +432,7 @@ if __name__ == '__main__':
                         solvertype = 'spsolve'
                     )
                  fypy = FyPy(fypyargs)
-                 fypy.doeverything(str(iexample))
+                 fypy.doeverything(str(iexample+args.shift))
              print(f'Solved example {iexample+1} of {args.ntotal} in {tsolve.elapsed:.2f}s')
              
                                    
