@@ -17,27 +17,27 @@ from fypy.src.libmesh import FyPyMesh
 '''
 Nachiket Gokhale gokhalen@gmail.com
 
-This script generates training, validation and testing examples for binary classification.
+This script generates training, validation and testing examples for EL ML.
 This works as follows
 
 1. Getting arguments: `getargs` is called to get arguments (the object `args`)
-2. Example generation: if `args.generate` is True, all examples (depending on args.problemtype) are generated and written to disk
+2. Example generation: if `args.generate` is True, all example are generated and written to disk.
+   examples are generated using `generate_training_parameters(args)`
 3. Solving: If `args.solve` is True, the examples are solved
 
 The meat of this script is in `2. Example generation`.
 
-4. Binary Classification: examples are generated using `generate_binary_training_parameters(args)`
+We will now take a closer look at it. 
 
-
-We will now take a closer look at these. 
-
-6. Binary Classification:
+6. Example Generation:
    1. `args.ntotal` random examples are generated using `generate_random(args)`.
       `generate_random` generates random circular inclusions.
       `generate_random` basically creates a dictionary which FyPyMesh uses to create meshes
        labels and categories are set manually
 
-   2. `args.nhomo` examples are made homogeneous by setting `stf` to `homogeneous`
+   2. if `args.nhomo` > 0 then it determines the number of training examples are made homogeneous by setting `stf` to `homogeneous`
+      if `args.nhomo` > 0 then an equivalent percentage of validation and test examples are made homogeneous
+
        We need to make homogeneous examples explicitly because `generate_random` does not do that for us.
 
    3. We count number of positive and negative training examples
@@ -48,11 +48,9 @@ def getargs():
     
     parser.add_argument('--prefix',help='prefix for training example directories',required=False,default='traindata',type=str)
 
-    parser.add_argument('--problemtype',help='binary classification or multiclass classification',required=True,choices=['binary'],default='binary')
     parser.add_argument('--generate',help='generate input files for training examples',required=False,default='False')
     parser.add_argument('--solve',help='solve training examples',required=False,default='False')
 
-    parser.add_argument('--ninc',help='number of inclusions',required=False,type=int,default=1)
     parser.add_argument('--rmin',help='lower bound on inclusion radius',required=False,type=float,default=0.05)
     parser.add_argument('--rmax',help='lower bound on inclusion radius',required=False,type=float,default=0.15)
     parser.add_argument('--nelemx',help='number of elements in the x-direction',required=False,type=int,default=16)
@@ -60,11 +58,8 @@ def getargs():
     parser.add_argument('--length',help='length of the domain in x direction',required=False,type=float,default=1.0)
     parser.add_argument('--breadth',help='length of the domain in y direction',required=False,type=float,default=1.0)
     
-    # total number of classes is nclass=nclassx*nclassy + 1 (for homogeneous)
-    parser.add_argument('--nclassx',help='number of classes to classify into (in x direction)',required=False,type=int,default=1)
-    parser.add_argument('--nclassy',help='number of classes to classify into (in y direction)',required=False,type=int,default=1)
-    parser.add_argument('--stfmin',help='lower bound on mu',required=False,type=float,default=1.0)
-    parser.add_argument('--stfmax',help='upper bound on mu',required=False,type=float,default=5.0)
+    parser.add_argument('--mumin',help='lower bound on mu',required=False,type=float,default=1.0)
+    parser.add_argument('--mumax',help='upper bound on mu',required=False,type=float,default=5.0)
     parser.add_argument('--nu',help="Poisson's ratio",required=False,type=float,default=0.25)
 
     # see below, where we check problemtype, for constraints on ntrain  
@@ -72,23 +67,22 @@ def getargs():
     parser.add_argument('--nvalid',help='number of validation examples to generate',required=False,type=int)
     parser.add_argument('--ntest', help='number of test examples to generate',      required=False,type=int)
     parser.add_argument('--nhomo',help='number of homogeneous examples to generate',required=False,type=int,default=4)
-    parser.add_argument('--nclassmin',help='minimum number of examples in each class',required=False,type=int,default=2)
     parser.add_argument('--shift',help='shift for numbering',required=False,type=int,default=0)
-    
-    # system arguments
-    parser.add_argument('--clean',help='delete previous data',required=False,type=str,default='False')
     
     args = parser.parse_args()
 
+    assert ( 0<= args.nhomo <= args.ntrain),'args.nhomo must lie between 0 and args.ntrain (both inclusive)'
+
+
     # for now, we're skipping creating nvalid and ntest and letting the actual ML program handle splitting into train,valid and test 
-    if (args.nvalid == None): args.nvalid = int(0.0*args.ntrain); 
-    if (args.ntest  == None): args.ntest  = int(0.0*args.ntrain); 
+    if (args.nvalid == None): args.nvalid = int(0.2*args.ntrain); 
+    if (args.ntest  == None): args.ntest  = int(0.2*args.ntrain);
 
-    args.ntotal  = args.ntrain + args.nvalid + args.ntest
+    args.nhomovalid = int((args.nhomo/args.ntrain)*(args.nvalid)) + 1
+    args.nhomotest  = int((args.nhomo/args.ntrain)*(args.ntest))  + 1
 
-    if ( args.problemtype == 'binary'):
-        assert(args.ntrain > args.nhomo),f'Number of training examples {args.ntrain} must exceed number of homogeneous examples {args.nhomo}'
-        args.nlabel =  2
+    args.ntotal = args.ntrain + args.nvalid + args.ntest
+    args.nlabel =  2
 
     # check that the inclusion specified, is big enough to include atleast 2 nodes in the x and y direction
     # number of nodes in rmin in x and y direction
@@ -111,7 +105,6 @@ def get_rmin_rmax(args):
     rmax  = refl*args.rmax
     return (rmin,rmax)
 
-
 class FyPyArgs():
     def __init__(self,inputfile,outputfile,inputdir,outputdir,partype,profile,solvertype):
         self.inputfile  = inputfile
@@ -125,10 +118,11 @@ class FyPyArgs():
         self.chunksize  = 1
 
 # will return list of dictionaries of parameter lists
-def generate_binary_training_parameters(args):
+def generate_training_parameters(args):
     outlist = []                                # list of arguments to pass to mesh creator
-    labels  = []                                # list of labels. This is a list of lists to
-                                                # keep it consistent with multiclass classification
+    labels  = []                                # list of labels. This is a list of lists (artifact of when the
+                                                # script used to do multiclass classification)
+                                                
     counts  = [0]*args.nlabel                   # only two types of labels
     category = [None]*args.ntotal
     
@@ -137,13 +131,20 @@ def generate_binary_training_parameters(args):
         outlist.append(dd)
         labels.append([1])
         category[iexample] = 1
-        
-    # make homogeneous examples
-    for ihomo in range(0,args.nhomo):
-        outlist[ihomo]['stftype']='homogeneous'
-        labels[ihomo] = [0]
-        category[ihomo] = 0
-        
+
+    if ( args.nhomo > 0): 
+        # make homogeneous training examples
+        istart = 0; iend = args.nhomo
+        make_homogeneous(istart,iend,outlist,labels,category,'training')
+    
+        # make homogeneous validation examples
+        istart = args.ntrain; iend = args.ntrain + args.nhomovalid
+        make_homogeneous(istart,iend,outlist,labels,category,'validation')    
+
+        # make homogneous test examples
+        istart = args.ntrain+args.nvalid; iend = args.ntrain + args.nvalid + args.nhomotest
+        make_homogeneous(istart,iend,outlist,labels,category,'test')
+    
     # making and counting (how many positive and how many negative) labels
     # count only in the training examples
     llcount   = labels[:args.ntrain]
@@ -151,16 +152,25 @@ def generate_binary_training_parameters(args):
     counts[1] = llcount.count([1])
 
     print('-'*80)
-    print(f'Binary classificaton: Positive (tumor)       examples {counts[1]} {(counts[1]/args.ntrain)*100:0.2f}%')
-    print(f'Binary classificaton: Negative (homogeneous) examples {counts[0]} {(counts[0]/args.ntrain)*100:0.2f}%')
-    print(f'Binary classificaton: Total examples {args.ntotal}, Training examples {args.ntrain}, Validation examples {args.nvalid}, Test Examples {args.ntest} ')
+    print(f'Positive (tumor)       training examples {counts[1]} {(counts[1]/args.ntrain)*100:0.2f}%')
+    print(f'Negative (homogeneous) training examples {counts[0]} {(counts[0]/args.ntrain)*100:0.2f}%')
+    print(f'Total examples {args.ntotal}, Training examples {args.ntrain}, Validation examples {args.nvalid}, Test Examples {args.ntest} ')
     print('-'*80)
     
     return outlist,labels,counts,category
 
+
+def make_homogeneous(istart,iend,outlist,labels,category,datatype):
+    print(f'Making {datatype} examples {istart} to {iend-1} (both inclusive) homogeneous')
+    for ihomo in range(istart,iend):
+        outlist[ihomo]['stftype']='homogeneous'
+        labels[ihomo]   = [0]
+        category[ihomo] =  0
+
 def generate_random(args):
     # generates a random dictionary of parameters
-    dd    = {} 
+    dd    = {}
+    
     dd['length']  = args.length
     dd['breadth'] = args.breadth
     dd['nelemx']  = args.nelemx
@@ -174,25 +184,13 @@ def generate_random(args):
     xcen          = np.random.uniform(0.0+0.05*args.length,args.length*0.95)
     ycen          = np.random.uniform(0.0+0.05*args.breadth,args.breadth*0.95)
     dd['centers'] = [[xcen,ycen]]
-    dd['mumin']   = args.stfmin
-    dd['mumax']   = args.stfmax
+    dd['mumin']   = args.mumin
+    dd['mumax']   = args.mumax
     dd['nu']      = args.nu
-    dd['nclassx'] = args.nclassx
-    dd['nclassy'] = args.nclassy
 
     return dd
 
 def make_file_names(args,idx):
-    '''
-    if ( idx < args.ntrain + args.shift):
-        dirname     = f'{args.prefix}' + '_train'  + str(idx)+'/'
-
-    if ( args.ntrain <= idx < args.ntrain + args.nvalid + args.shift):
-        dirname     = f'{args.prefix}' + '_valid'  + str(idx)+'/'
-
-    if ( (args.ntrain + args.nvalid) <= idx < args.ntotal):
-        dirname     = f'{args.prefix}' + '_test'  + str(idx)+'/'
-    '''
     dirname     = f'{args.prefix}' + str(idx)+'/'
     inputname   = f'input'  + str(idx) + '.json.in'
     outputname  = f'output' + str(idx) + '.json.out'
@@ -204,20 +202,14 @@ if __name__ == '__main__':
     
     args = getargs()
 
-    # clean directory if asked to. safer than manual rm -rf *
-    if (args.clean == 'True'):
-        gg = glob.glob(f'{args.prefix}*')
-        for g in gg:
-            shutil.rmtree(g)
-
-    if ( args.generate == 'True') and (args.problemtype =='binary'):
-        outlist,labels,counts,category = generate_binary_training_parameters(args)
+    if ( args.generate == 'True'):
+        outlist,labels,counts,category = generate_training_parameters(args)
 
     if (args.generate == 'True'):
         for iexample,argdict in enumerate(outlist):
             dirname,inputname,outputname,mlinfoname = make_file_names(args,iexample+args.shift)
             
-            print(f'Creating training inputfiles for example {iexample+1} of {args.ntotal} {args.problemtype} classification')
+            print(f'Creating training inputfiles for example {iexample+1} of {args.ntotal} classification')
             mesh2d = FyPyMesh(inputdir=dirname,outputdir=dirname)
             os.mkdir(dirname)
             mesh2d.create_mesh_2d(**argdict)
@@ -244,7 +236,7 @@ if __name__ == '__main__':
     if (args.solve == 'True'):
         for iexample in range(args.ntotal):
              dirname,inputname,outputname,mlinfoname = make_file_names(args,iexample+args.shift)
-             print(f'Solving training example {iexample+1} of {args.ntotal} {args.problemtype} classification')
+             print(f'Solving training example {iexample+1} of {args.ntotal} classification')
              tsolve = Timer('Solve timer',verbose=0)
              with tsolve:
                  fypyargs = FyPyArgs(
