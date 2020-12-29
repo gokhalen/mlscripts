@@ -27,7 +27,7 @@ This works as follows
 The meat of this script is in `2. Example generation`.
 
 4. Binary Classification: examples are generated using `generate_binary_training_parameters(args)`
-
+5. Multiclass classification: examples are generated using `generate_multiclass_training_parameters(args)`
 
 We will now take a closer look at these. 
 
@@ -41,6 +41,28 @@ We will now take a closer look at these.
        We need to make homogeneous examples explicitly because `generate_random` does not do that for us.
 
    3. We count number of positive and negative training examples
+
+7. Multiclass classifcation:
+ 
+   1. We divide the domain into `args.nclassx` cells in the x direction and `args.nclassy` 
+      cells in the y direction, calculate their centers. These cells are our classes. 
+      We aim to classify a tumor into one of these cells (or homogeneous), depending
+      on where its center is located.  We create labels for each class, stored in labellist
+
+   2. We generate all examples.
+          1. `generate_random_multiclass`: this is `generate_random` plus some code 
+              to generate homogeneous examples as well
+
+          2. we make label and categorize example using `make_label`
+              
+          
+  3. Overwrite:
+          1. Overwrite the first args.nminexamp to make sure that each class contains 
+             atleast args.nminexamp examples
+
+  4. Make labels and count and categorize
+
+
 '''
 
 def getargs():
@@ -48,9 +70,10 @@ def getargs():
     
     parser.add_argument('--prefix',help='prefix for training example directories',required=False,default='traindata',type=str)
 
-    parser.add_argument('--problemtype',help='binary classification or multiclass classification',required=True,choices=['binary'],default='binary')
+    parser.add_argument('--problemtype',help='binary classification or multiclass classification',required=True,choices=['binary','multiclass'])
     parser.add_argument('--generate',help='generate input files for training examples',required=False,default='False')
     parser.add_argument('--solve',help='solve training examples',required=False,default='False')
+
 
     parser.add_argument('--ninc',help='number of inclusions',required=False,type=int,default=1)
     parser.add_argument('--rmin',help='lower bound on inclusion radius',required=False,type=float,default=0.05)
@@ -89,6 +112,11 @@ def getargs():
     if ( args.problemtype == 'binary'):
         assert(args.ntrain > args.nhomo),f'Number of training examples {args.ntrain} must exceed number of homogeneous examples {args.nhomo}'
         args.nlabel =  2
+    if (args.problemtype =='multiclass'):
+        args.nlabel    = args.nclassx*args.nclassy + 1
+        args.nminexamp = (args.nlabel)*args.nclassmin 
+        assert( args.ntrain > args.nminexamp ),f'Number of training examples {args.ntrain} must exceed {args.nminexamp}, computed on basis of minimum number of examples per class'
+
 
     # check that the inclusion specified, is big enough to include atleast 2 nodes in the x and y direction
     # number of nodes in rmin in x and y direction
@@ -158,6 +186,144 @@ def generate_binary_training_parameters(args):
     
     return outlist,labels,counts,category
 
+# will return list of dictionaries of parameter lists
+def generate_multiclass_training_parameters(args):
+    # nhomo homogeneous examples + nclass classification examples + ntrain random examples
+
+    print(f'Generating {args.ntotal} training examples,{args.nminexamp}',
+          f'compulsary/minimum training examples {args.ntrain-args.nminexamp}',
+          f'random training examples',
+          f'{args.nvalid} validation examples',
+          f'{args.ntest} testing examples')
+    
+    outlist  = []                   # list of arguments to pass to mesh creator
+    labels   = [None]*args.ntotal   # list of labels (list of lists of size nlabel)
+    centers  = []                   # list of centers used to determine labels.
+    category = [None]*args.ntotal   # numerical value of the cateory for each label
+    counts   = [0]*args.nlabel      # counts for each label
+
+    labellist = [None]*args.nlabel  # store each label - used for counting
+
+    # A typical label is [ 0 1 0 0 ...0] of length nlabel
+    # having 1 in the class where the stiffness belongs to and zeros elsewhere
+
+    dx  = args.length  / args.nclassx
+    dy  = args.breadth / args.nclassy
+
+    # create the label for the homogeneous case
+    ll = [0]*args.nlabel;  ll[0] = 1
+    labellist[0] = ll
+    
+    # initialize centers and labels
+    for iclassx in range(args.nclassx):
+        for iclassy in range(args.nclassy):
+            idx  = iclassx*args.nclassy + iclassy
+            xcen = (dx/2.0) + dx*iclassx
+            ycen = (dy/2.0) + dy*iclassy
+            centers.append([xcen,ycen])
+
+            # create label for this class
+            ll = [0]*args.nlabel ; ll[idx+1]=1
+            labellist[idx+1] = ll
+
+    # generate arguments for the mesher and label 'all' examples
+    for iexample in range(0,args.ntotal):
+        dd = generate_random_multiclass(args)
+        outlist.append(dd)
+        # create dummy labels for now
+        # labels.append([0]*args.ntrain)
+        ll,cat = make_label(args,centers,dd)
+        labels[iexample]=ll
+        category[iexample]=cat
+
+    # overwrite the first args.nminexamp with homogeneous and labelled examples
+    # this is done so that we have minimum number of examples from each class
+
+    # generate the homogeneous examples
+    # by changing the arguments ('inclusion'->'homogeneous') for the mesher
+    for ihomo in range(0,args.nclassmin):
+        outlist[ihomo]['stftype']='homogeneous'
+        ll,cat   = make_label(args,centers,outlist[ihomo])
+        labels[ihomo] = ll
+        category[ihomo]=cat
+        
+    # make sure that we have training examples for each class
+    # each cell in the classification grid must have an inclusion
+    # generate minimum training examples 'nclassmin' for each class
+    for iclass in range(args.nclassmin):
+        for iclassx in range(args.nclassx):
+            for iclassy in range(args.nclassy):
+                idx   = iclassx*args.nclassy + iclassy + args.nclassmin + iclass*(args.nclassx*args.nclassy)
+                idcen = iclassx*args.nclassy + iclassy
+                # what happends if the tumor is in more than 1 training cell
+                # one thing we can do, is change the label vector to be 1 in all the cells which have the tumor
+                # but let's leave that for now
+                xcen,ycen = centers[idcen]
+                if ( iclass == 0):
+                    # first example at the center of each cell of the training grid
+                    rad  = min(dx/2.0,dy/2.0)*0.6
+                else:
+                    # second example at a random point in each cell of the training grid
+                    xmin = dx*iclassx; xmax = (dx*iclassx) + dx
+                    ymin = dy*iclassy; ymax = (dy*iclassy) + dy
+                    xcen = np.random.uniform(xmin,xmax)
+                    ycen = np.random.uniform(ymin,ymax)
+                    rad  = min(dx/2.0,dy/2.0)*0.6*np.random.uniform(0.6,1.0)
+
+                if ( xcen >= args.length):
+                    print(f'xcen out of range in {idx=}')
+                    breakpoint()
+
+                if ( ycen >= args.breadth):
+                    print(f'ycen out of range in {idx=}')
+                    breakpoint()
+
+                outlist[idx]['radius'] = rad
+                outlist[idx]['xcen']   = xcen
+                outlist[idx]['ycen']   = ycen
+                outlist[idx]['stftype']    = 'inclusion'
+                ll,cat = make_label(args,centers,outlist[idx])
+                labels[idx] = ll
+                category[idx] = cat
+
+    # make sure there is atleast 1 example for each class
+    # making and counting labels of each type
+
+    llcount = labels[:args.ntrain]
+    for ilabel in range(args.nlabel):
+        counts[ilabel] = llcount.count(labellist[ilabel])
+        print(f'Multiclass classification: Class {ilabel+1} has {counts[ilabel]} training examples {(counts[ilabel]/args.ntrain)*100:0.2f}%')
+
+    return outlist,labels,counts,category
+
+def make_label(args,centers,dd):
+    if (dd['stftype'] == 'homogeneous'):
+        # homogneous case
+        label = [0]*args.nlabel
+        label[0] = 1
+        category = 0
+    else:
+        # inclusion case
+        xx = dd['xcen']
+        yy = dd['ycen']
+        maxlength = (args.length**2.0 + args.breadth**2.0)**0.5
+        closest   = -10
+        for icen,(cenx,ceny) in enumerate(centers):
+            dist = ((xx-cenx)**2.0 + (yy-ceny)**2.0)**0.5
+            if (dist <= maxlength):
+                closest   = icen
+                maxlength = dist
+
+        label = [0]*args.nlabel
+        # if 'closest' is 0 , the 1st place in 'label' is 1
+        # if 'closest' is 1 , the 2nd place in 'label' is 1
+        # and so on
+        label[closest+1] = 1
+        category         = closest+1
+        
+    # return label vector and label id
+    return label,category
+
 def generate_random(args):
     # generates a random dictionary of parameters
     dd    = {} 
@@ -179,6 +345,17 @@ def generate_random(args):
     dd['nu']      = args.nu
     dd['nclassx'] = args.nclassx
     dd['nclassy'] = args.nclassy
+
+    return dd
+
+def generate_random_multiclass(args):
+    # if random choice is 0 then return homogeneous stiffness
+    dd      = generate_random(args)
+    choices = list(range((args.nclassx*args.nclassy)+1))
+    ichoice = random.choice(choices)
+    
+    if (ichoice == 0):
+        dd['stftype']='homogeneous'
 
     return dd
 
@@ -213,6 +390,9 @@ if __name__ == '__main__':
     if ( args.generate == 'True') and (args.problemtype =='binary'):
         outlist,labels,counts,category = generate_binary_training_parameters(args)
 
+    if ( args.generate == 'True') and (args.problemtype =='multiclass'):
+        outlist,labels,counts,category = generate_multiclass_training_parameters(args)
+
     if (args.generate == 'True'):
         for iexample,argdict in enumerate(outlist):
             dirname,inputname,outputname,mlinfoname = make_file_names(args,iexample+args.shift)
@@ -236,6 +416,10 @@ if __name__ == '__main__':
 
                 if ( ycen >= args.breadth):
                     print(f'ycen out of range in {iexample=}')
+
+            if (args.problemtype=='multiclass'):
+                if ( ( iexample >=2 ) and (iexample < args.nminexamp) ) and ( argdict['stftype'] == 'homogeneous'):
+                    print(f'Invalid homogeneous entry at {iexample=}')
 
             # dump machine learning info
             with open(mlinfoname,'x') as fout:
