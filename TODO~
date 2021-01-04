@@ -1,15 +1,8 @@
 0) Check if classification is being carried out correctly
 2) Compute percentages for training examples and total examples separately
 4) modify mlsetup to generate data with no homogneous examples - check if setting nhomo to zero will do this
+5) Breast mesh using GMSH and prediction from displacement images of breast
 
 Other ideas:
 
 # TODO: Add more than 1 inclusion, predict number of inclusions as well
-#       Confusion matrix
-#       Predict - stiffness values of inclusion
-#               - center and **radius** of inclusion
-#       classification: decide which region tumor falls into
-#       feature scaling
-#       predict stiffness,radius,and center
-#       predict binary (yes/no) and stiffness,radius,and center
-       
