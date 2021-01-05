@@ -97,8 +97,13 @@ def read_data(start,stop,prefix,nnodex,nnodey):
         xx    = coord[:,0].reshape(nnodex,nnodey).T
         yy    = coord[:,1].reshape(nnodex,nnodey).T
     
-    nexamples  = stop - start
-    images     = np.empty((nexamples,nnodey,nnodex,ndime),dtype='float64')
+    nexamples    = stop - start
+    images       = np.empty((nexamples,nnodey,nnodex,ndime),dtype='float64')
+    binary_label = np.empty((nexamples,),dtype='int64')
+    center_label = np.empty((nexamples,2),dtype='float64')
+    radius_label = np.empty((nexamples,),dtype='float64')
+    mu_label     = np.empty((nexamples,),dtype='float64')
+    
     # iloc is training example, ii is file suffix
     for iloc,ii in enumerate(range(start,stop)):
 
@@ -109,6 +114,10 @@ def read_data(start,stop,prefix,nnodex,nnodey):
         
         with open(mlinfoname,'r') as fin:
             dd = json.load(fin)
+            binary_label[iloc] = dd['label'][0]
+            center_label[iloc] = np.asarray(dd['centers'])  # assume only one inclusion
+            radius_label[iloc] = dd['radii'][0]
+            mu_label[iloc]     = dd['mu']
 
         # get solution (displacement data)
         with open(outputname,'r') as fin:
@@ -123,6 +132,7 @@ def read_data(start,stop,prefix,nnodex,nnodey):
         # plotfield(xx,yy,images[iloc,:,:,0],'ux',outsolx)
         # plotfield(xx,yy,images[iloc,:,:,1],'uy',outsoly)
 
+    pass
 
 def forward_scale_data():
     pass

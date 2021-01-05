@@ -57,10 +57,11 @@ def getargs():
     parser.add_argument('--nelemy',help='number of elements in the y-direction',required=False,type=int,default=16)
     parser.add_argument('--length',help='length of the domain in x direction',required=False,type=float,default=1.0)
     parser.add_argument('--breadth',help='length of the domain in y direction',required=False,type=float,default=1.0)
-    
-    parser.add_argument('--mumin',help='lower bound on mu',required=False,type=float,default=1.0)
-    parser.add_argument('--mumax',help='upper bound on mu',required=False,type=float,default=5.0)
-    parser.add_argument('--nu',help="Poisson's ratio",required=False,type=float,default=0.25)
+
+    parser.add_argument('--muback',help='background mu',required=False,type=float,default=1.0)
+    parser.add_argument('--mumin',help='lower bound on mu in inclusion',required=False,type=float,default=2.0)
+    parser.add_argument('--mumax',help='upper bound on mu in inclusion',required=False,type=float,default=5.0)
+    parser.add_argument('--nu',help="Poisson's ratio",required=False,type=float,default=0.4)
 
     # see below, where we check problemtype, for constraints on ntrain  
     parser.add_argument('--ntrain',help='number of training   examples to generate',required=False,type=int,default=16)
@@ -90,8 +91,8 @@ def getargs():
     nrminx   = rmin*(args.nelemx/args.length)
     nrminy   = rmin*(args.nelemy/args.breadth)
 
-    print('node capture assertion turned off')
-    # assert ( int(min(nrminx,nrminy)) > 1 ),'Not enough nodes captured in inclusion specified. Increase nelemx,nelemy,rmin,rmax as appropriate'
+    #  print('node capture assertion turned off')
+    assert ( int(min(nrminx,nrminy)) > 1 ),'Not enough nodes captured in inclusion specified. Increase nelemx,nelemy,rmin,rmax as appropriate'
 
 
     # save parameters passed to mlsetup
@@ -185,8 +186,8 @@ def generate_random(args):
     xcen          = np.random.uniform(0.0+0.05*args.length,args.length*0.95)
     ycen          = np.random.uniform(0.0+0.05*args.breadth,args.breadth*0.95)
     dd['centers'] = [[xcen,ycen]]
-    dd['mumin']   = args.mumin
-    dd['mumax']   = args.mumax
+    dd['mu']      = np.random.uniform(args.mumin,args.mumax)
+    dd['muback']  = args.muback
     dd['nu']      = args.nu
 
     return dd
