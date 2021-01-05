@@ -90,7 +90,8 @@ def getargs():
     nrminx   = rmin*(args.nelemx/args.length)
     nrminy   = rmin*(args.nelemy/args.breadth)
 
-    assert ( int(min(nrminx,nrminy)) > 1 ),'Not enough nodes captured in inclusion specified. Increase nelemx,nelemy,rmin,rmax as appropriate'
+    print('node capture assertion turned off')
+    # assert ( int(min(nrminx,nrminy)) > 1 ),'Not enough nodes captured in inclusion specified. Increase nelemx,nelemy,rmin,rmax as appropriate'
 
 
     # save parameters passed to mlsetup

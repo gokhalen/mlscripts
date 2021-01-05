@@ -3,11 +3,11 @@ import numpy as np
 import sys,os,glob
 import json
 import argparse
+import matplotlib.pyplot as plt
 from collections import namedtuple
 
 message = 'Identification of inclusion parameters using ML\
  Nachiket Gokhale gokhalen@gmail.com'
-
 
 # ':' means size of training examples
 # binary = [:] 1/0 (inclusion/no inclusion)
@@ -92,6 +92,10 @@ def read_data(start,stop,prefix,nnodex,nnodey):
     with open(inputname,'r') as fin:
         dd    = json.load(fin)
         ndime = dd['ndime']
+        coord = np.asarray(dd['coord'])
+        # do not .reshape(nnodey,nnodex)
+        xx    = coord[:,0].reshape(nnodex,nnodey).T
+        yy    = coord[:,1].reshape(nnodex,nnodey).T
     
     nexamples  = stop - start
     images     = np.empty((nexamples,nnodey,nnodex,ndime),dtype='float64')
@@ -101,7 +105,7 @@ def read_data(start,stop,prefix,nnodex,nnodey):
         mlinfoname = prefix+str(ii)+'/mlinfo'+str(ii)+'.json.in';
         outputname = prefix+str(ii)+'/output'+str(ii)+'.json.out';
         outsolx    = prefix+str(ii)+'/uxml'+str(ii)+'.png';
-        outsoly    = prefix+str(ii)+'/uxml'+str(ii)+'.png';
+        outsoly    = prefix+str(ii)+'/uyml'+str(ii)+'.png';
         
         with open(mlinfoname,'r') as fin:
             dd = json.load(fin)
@@ -109,8 +113,15 @@ def read_data(start,stop,prefix,nnodex,nnodey):
         # get solution (displacement data)
         with open(outputname,'r') as fin:
             dd   = json.load(fin)
-            sol  = np.asarray(dd['solution']).reshape(nnodey,nnodex,ndime)
-            images[iloc,:,:,:] = sol
+            sol  = np.asarray(dd['solution'])
+            # do not reshape.(nnodey,nnodex)
+            solx = sol[:,0].reshape(nnodex,nnodey).T
+            soly = sol[:,1].reshape(nnodex,nnodey).T
+            images[iloc,:,:,0] = solx
+            images[iloc,:,:,1] = soly
+
+        # plotfield(xx,yy,images[iloc,:,:,0],'ux',outsolx)
+        # plotfield(xx,yy,images[iloc,:,:,1],'uy',outsoly)
 
 
 def forward_scale_data():
@@ -133,6 +144,17 @@ def goodbye():
     print('-'*80)
     print('Exiting gracefully ... goodbye!')
     print('-'*80)
+
+def plotfield(xx,yy,field,title,fname):
+    plt.figure(title)
+    plt.pcolormesh(xx,yy,field)
+    plt.title(title)
+    plt.colorbar()
+    ax = plt.gca()
+    ax.set_aspect('equal')
+    plt.savefig(fname)
+    plt.close()
+
 
 if __name__ =='__main__':
     welcome()
