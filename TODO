@@ -1,3 +1,4 @@
+-1) field data reading
 0) Check if classification is being carried out correctly
 2) Compute percentages for training examples and total examples separately
 4) modify mlsetup to generate data with no homogneous examples - check if setting nhomo to zero will do this
@@ -6,7 +7,3 @@
 Other ideas:
 
 # TODO: Add more than 1 inclusion, predict number of inclusions as well
-
-Immediate:
- 
-Check if displacement data is being read correctly in ml by outputting images.

@@ -252,20 +252,3 @@ def plotall(history,outputdir):
         plt.ylabel(ikey)
         plt.grid(True,which='both')
         plt.savefig(outputdir+'plot'+ikey+'.png')
-
-
-'''
-import numpy as np
-import matplotlib.pyplot as plt
-nnodex = 64 
-nnodey = 64
-ycoord,xcoord = np.indices((nnodex,nnodey))
-for ii in range(6):
-    print(ii)
-    plt.figure(str(ii))
-    plt.pcolormesh(xcoord,ycoord,train_data[0][ii,:,:,0],shading='auto',vmin=1.0,vmax=5.0)
-    plt.colorbar()
-    ax = plt.gca()
-    ax.set_aspect('equal')
-    plt.savefig('sample'+str(ii)+'.png')
-'''
