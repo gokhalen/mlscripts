@@ -1,9 +1,14 @@
+import matplotlib as mpl
+# https://stackoverflow.com/questions/45993879/matplot-lib-fatal-io-error-25-inappropriate-ioctl-for-device-on-x-server-loc See nanounanue's answer
+mpl.use('Agg')
 import matplotlib.pyplot as plt
 
 def plotall(mltype,history):
     # plot everything in history
     # history is returned by model.fit
-    title_dict = {'binary':'for binary classification'}
+    title_dict = {'binary':'for binary classification',
+                  'center':'for prediction of center'
+                  }
     for ikey in history.history.keys():
         plt.figure(ikey)
         data   = history.history[ikey]

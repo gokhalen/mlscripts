@@ -79,8 +79,13 @@ def getargs():
     if (args.nvalid == None): args.nvalid = int(0.2*args.ntrain); 
     if (args.ntest  == None): args.ntest  = int(0.2*args.ntrain);
 
-    args.nhomovalid = int((args.nhomo/args.ntrain)*(args.nvalid)) + 1
-    args.nhomotest  = int((args.nhomo/args.ntrain)*(args.ntest))  + 1
+    if ( args.nhomo > 0 ):
+        args.nhomovalid = int((args.nhomo/args.ntrain)*(args.nvalid)) + 1
+        args.nhomotest  = int((args.nhomo/args.ntrain)*(args.ntest))  + 1
+
+    else:
+        args.nhomovalid = 0
+        args.nhomotest  = 0
 
     args.ntotal = args.ntrain + args.nvalid + args.ntest
     args.nlabel =  2

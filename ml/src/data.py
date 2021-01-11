@@ -23,7 +23,7 @@ def split_cnndata(cnndata,start,stop):
                   labels=labels)
     return out
 
-def get_data(params):
+def get_data(ntrain,nvalid,ntest,nnodex,nnodey,prefix):
     # reads training,validation and test data and returns it
     # prefix is the prefix of the directories which contain training validation and test data
     # ntrain,nvalid,ntest are integers and should sum up to less than the number of files
@@ -32,12 +32,6 @@ def get_data(params):
     
     train_data,valid_data,test_data = None,None,None
 
-    ntrain = params['ntrain'];
-    nvalid = params['nvalid'];
-    ntest  = params['ntest'];
-    prefix = params['prefix'];
-    nnodex = params['nelemx']+1;
-    nnodey = params['nelemy']+1;
     nsum   = ntrain+nvalid+ntest
 
     bool_files_exist = (os.path.exists('images.npy') and
@@ -77,10 +71,10 @@ def get_data(params):
         
         full_data = CNNData(images=images,labels=labels)
     else:
-        print('-'*80,f'\n Previously created files not found, processing data and creating .npy files','-'*80,sep='')
+        print('-'*80,f'\nPreviously created files not found, processing data and creating .npy files\n','-'*80,sep='')
         # https://stackoverflow.com/questions/973473/getting-a-list-of-all-subdirectories-in-the-current-directory?rq=1
         # Udit Bansal's answer
-        gg = glob.glob(f'{params["prefix"]}*/')  # get directories starting with prefix
+        gg = glob.glob(f'{prefix}*/')  # get directories starting with prefix
         ntotal = len(gg);
         assert (ntotal >= nsum),'Number of examples not sufficient'
         full_data  = read_data(0,nsum,prefix,nnodex,nnodey,'full_data')
@@ -116,16 +110,19 @@ def read_data(start,stop,prefix,nnodex,nnodey,strtype):
     center_label = np.empty((nexamples,2),dtype='float64')
     radius_label = np.empty((nexamples,),dtype='float64')
     mu_label     = np.empty((nexamples,),dtype='float64')
-    # if we get to doing full field ML we'll put in the right dimensions
-    field_label  = np.ones((nexamples,),dtype='float64')               
+    field_label  = np.empty((nexamples,nnodey,nnodex,2),dtype='float64')               
     
     # iloc is training example, ii is file suffix
     for iloc,ii in enumerate(range(start,stop)):
         print(f'Reading example {iloc+1} of {nexamples} for {strtype}')
         mlinfoname = prefix+str(ii)+'/mlinfo'+str(ii)+'.json.in';
         outputname = prefix+str(ii)+'/output'+str(ii)+'.json.out';
-        outsolx    = prefix+str(ii)+'/uxml'+str(ii)+'.png';
-        outsoly    = prefix+str(ii)+'/uyml'+str(ii)+'.png';
+        inputname  = prefix+str(ii)+'/input'+str(ii)+'.json.in';
+        
+        outsolx = prefix+str(ii)+'/uxml'+str(ii)+'.png';
+        outsoly = prefix+str(ii)+'/uyml'+str(ii)+'.png';
+        outlam  = prefix+str(ii)+'/lamml'+str(ii)+'.png';
+        outmu   = prefix+str(ii)+'/muml'+str(ii)+'.png';
         
         with open(mlinfoname,'r') as fin:
             dd = json.load(fin)
@@ -135,9 +132,11 @@ def read_data(start,stop,prefix,nnodex,nnodey,strtype):
             mu_label[iloc]     = dd['mu']
             if dd['stftype'] == 'homogeneous':
                 print('WARNING: Homogeneous mu_label set to mu_back')
-                mu_label[iloc] = dd['muback']
-
-
+                mu_label[iloc]     = dd['muback']
+                print('WARNING: Homogeneous center_label set to -1.0,-1.0')
+                center_label[iloc] = -1.0,-1.0
+                print('WARNING: Homogeneous radius_label set to -1.0')
+                radius_label[iloc] = -1.0
         # get solution (displacement data)
         with open(outputname,'r') as fin:
             dd   = json.load(fin)
@@ -148,9 +147,27 @@ def read_data(start,stop,prefix,nnodex,nnodey,strtype):
             images[iloc,:,:,0] = solx
             images[iloc,:,:,1] = soly
 
+        # get field
+        with open(inputname,'r') as fin:
+            dd   = json.load(fin)
+            prop = np.asarray(dd['prop'])
+            lam  = prop[:,0].reshape(nnodex,nnodey).T
+            mu   = prop[:,1].reshape(nnodex,nnodey).T
+            field_label[iloc,:,:,0] = lam
+            field_label[iloc,:,:,1] = mu
+            
+
         plotfield(xx,yy,images[iloc,:,:,0],'ux',outsolx)
         plotfield(xx,yy,images[iloc,:,:,1],'uy',outsoly)
         
+        plotfield(xx,yy,field_label[iloc,:,:,0],'lam',outlam)
+        plotfield(xx,yy,field_label[iloc,:,:,1],'mu',outmu)
+
+    listbin = list(binary_label)
+    _h      = listbin.count(0)
+    _nh     = listbin.count(1)
+    
+    print(f'Found {_nh} non-homogeneous and {_h} homogeneous examples out of a total {_nh+_h}')            
     ll  = Labels(binary=binary_label,center=center_label,radius=radius_label,value=mu_label,field=field_label)
     out = CNNData(images=images,labels=ll)
 

@@ -17,6 +17,9 @@ def get_args():
     parser.add_argument('--ntest', help='number of test examples to generate',
                         required=False,type=int)
 
+    parser.add_argument('--nepochs', help='number of epochs',
+                        required=False,default=12,type=int)
+
     parser.add_argument('--prefix', help='prefix of data directories',
                         required=False,type=str,default='traindata')
 
@@ -40,10 +43,12 @@ def update_params(params,args):
     if (args.ntrain != None): newparams['ntrain'] = args.ntrain
     if (args.nvalid != None): newparams['nvalid'] = args.nvalid
     if (args.ntest  != None): newparams['ntest']  = args.ntest
+    if (args.prefix != None): newparams['prefix'] = args.prefix
 
     if (args.ntrain != None) or (args.nvalid !=None) or (args.ntest != None):
         newparams['ntotal'] = newparams['ntrain'] + newparams['nvalid'] + newparams['ntest']
 
-    newparams['mltype'] = args.mltype
+    newparams['mltype']  = args.mltype
+    newparams['nepochs'] = args.nepochs
         
     return newparams

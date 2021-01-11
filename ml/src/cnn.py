@@ -1,21 +1,32 @@
 import tensorflow as tf
+import os
 from sklearn.metrics import confusion_matrix, accuracy_score
-from .datastrc import *
 
-def define_cnn(params):
+from .datastrc import *
+from .plotting import plotall
+
+def define_cnn(mltype,nnodex,nnodey):
     ndim = 2 # number of displacement components.
 
-    nnodex  = params['nelemx']+1;
-    nnodey  = params['nelemy']+1;
-    mltype  = params['mltype'];
+    # nnodex  = params['nelemx']+1;
+    # nnodey  = params['nelemy']+1;
+    # mltype  = params['mltype'];
 
     # lookup table to define output layer (units and activation)
     # and loss and other metrics to evaluate
     # look up table seems to be cleaner than using if statements
-    units      = {'binary':1}
-    loss       = {'binary':'binary_crossentropy'}
-    activation = {'binary':'sigmoid'}
-    metrics    = {'binary':['accuracy']}
+    units      = {'binary':1,
+                  'center':2
+                  }
+    loss       = {'binary':'binary_crossentropy',
+                  'center':'mse'
+                  }
+    activation = {'binary':'sigmoid',
+                  'center':'linear'
+                  }
+    metrics    = {'binary':['accuracy'],
+                  'center':[]
+                  }
 
     # Initialising the CNN
     cnn    = tf.keras.models.Sequential()
@@ -55,11 +66,34 @@ def train_cnn(mltype,cnn,train_data,valid_data,epochs):
     
     return (cnn,history)
 
+def load_or_train_and_plot_cnn(mltype,train_data,valid_data,nnodex,nnodey,epochs):
+    
+    # load old model if exists else create new model
+    if (os.path.exists(mltype)):
+        print('-'*80,f'\n Old model for mltype={mltype} exists...loading old model\n','-'*80,sep='')
+        cnn=tf.keras.models.load_model(mltype)
+    else:
+        cnn         = define_cnn(mltype,nnodex,nnodey)
+        cnn,history = train_cnn(mltype=mltype,
+                                cnn=cnn,
+                                train_data=train_data,
+                                valid_data=valid_data,
+                                epochs=epochs
+                                )
+        plotall(mltype,history)
+        # https://github.com/tensorflow/tensorflow/issues/44178 - Deprecation
+        # warnings are nothing to worry about
+        tf.keras.models.save_model(cnn,mltype,overwrite=True,include_optimizer=True)
+        
+    return cnn
+
+
 def predict_cnn(mltype,cnn,test_data):
+    out = cnn.predict(test_data.images)
     if ( mltype == 'binary'):
-        out = cnn.predict(test_data.images)
         out = out > 0.5
         out = out.reshape((-1,))
+
     return out
 
 def post_process_cnn(mltype,prediction,test_data):
@@ -69,6 +103,8 @@ def post_process_cnn(mltype,prediction,test_data):
         conf_matrix = confusion_matrix(y_pred=prediction,y_true=test_data.labels.binary)
         accu_score  = accuracy_score(y_pred=prediction,y_true=test_data.labels.binary)
         binary_out  = BinaryPostData(accu_score=accu_score,conf_matrix=conf_matrix)
+        print(f'Confusion Matrix = \n {conf_matrix}')
+        print(f'Accurary Score   =  {accu_score}')
 
     if (mltype == 'center'):
         pass
