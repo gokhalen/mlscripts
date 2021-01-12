@@ -42,12 +42,15 @@ if __name__ =='__main__':
                                       epochs=epochs
                                      )
     cnn.summary()
-    prediction = predict_cnn( mltype=mltype,
-                              cnn=cnn,
-                              test_data=test_data
-                             )
-
+    prediction = predict_and_save_cnn( mltype=mltype,
+                                       cnn=cnn,
+                                       test_data=test_data
+                                      )
+    
     postproc = post_process_cnn( mltype=mltype,
+                                 ntrain=ntrain,
+                                 nvalid=nvalid,
+                                 ntest=ntest,
                                  prediction=prediction,
                                  test_data=test_data
                                 )

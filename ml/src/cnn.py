@@ -1,16 +1,19 @@
 import tensorflow as tf
-import os
+import os,numpy as np
+import matplotlib as mpl
+import matplotlib.pyplot as plt
+
 from sklearn.metrics import confusion_matrix, accuracy_score
 
 from .datastrc import *
 from .plotting import plotall
 
+# Custom activation function
+# https://stackoverflow.com/questions/43915482/how-do-you-create-a-custom-activation-function-with-keras
+# https://keras.io/api/layers/activations/
+
 def define_cnn(mltype,nnodex,nnodey):
     ndim = 2 # number of displacement components.
-
-    # nnodex  = params['nelemx']+1;
-    # nnodey  = params['nelemy']+1;
-    # mltype  = params['mltype'];
 
     # lookup table to define output layer (units and activation)
     # and loss and other metrics to evaluate
@@ -53,8 +56,6 @@ def define_cnn(mltype,nnodex,nnodey):
             cnn, to_file=f'model_{mltype}.png', show_shapes=True, show_layer_names=True,
             rankdir='TB', expand_nested=False, dpi=256
     )
-
-    
     
     return cnn
 
@@ -88,25 +89,36 @@ def load_or_train_and_plot_cnn(mltype,train_data,valid_data,nnodex,nnodey,epochs
     return cnn
 
 
-def predict_cnn(mltype,cnn,test_data):
+def predict_and_save_cnn(mltype,cnn,test_data):
     out = cnn.predict(test_data.images)
     if ( mltype == 'binary'):
         out = out > 0.5
         out = out.reshape((-1,))
 
+    np.save(mltype+'_prediction',out)
     return out
 
-def post_process_cnn(mltype,prediction,test_data):
+def post_process_cnn(mltype,ntrain,nvalid,ntest,prediction,test_data):
     binary_out = None ;    center_out = None;    radius_out = None
     value_out  = None ;    field_out  = None; 
     if (mltype == 'binary'):
         conf_matrix = confusion_matrix(y_pred=prediction,y_true=test_data.labels.binary)
         accu_score  = accuracy_score(y_pred=prediction,y_true=test_data.labels.binary)
         binary_out  = BinaryPostData(accu_score=accu_score,conf_matrix=conf_matrix)
-        print(f'Confusion Matrix = \n {conf_matrix}')
+        
+        print(f'Confusion Matrix = \n {conf_matrix[0][0]} (TN) {conf_matrix[0][1]} (FP) \n {conf_matrix[1][0]} (FN) {conf_matrix[1][1]} (TP) ')
         print(f'Accurary Score   =  {accu_score}')
+        
+        # find which examples are not matching 
+        boolbin = (prediction != test_data.labels.binary)
+        idx,    = np.where(boolbin)
+        if ( idx.size > 0 ):
+            print(f'Examples ',idx,' in test set and ',idx+ntrain+nvalid,' in global set (0-based indexing) are not classified correctly',sep='')
 
     if (mltype == 'center'):
+
+
+        
         pass
 
     if (mltype == 'radius'):
@@ -124,6 +136,4 @@ def post_process_cnn(mltype,prediction,test_data):
                    value=value_out,
                    field=field_out
                    )
-
-    
     return out
