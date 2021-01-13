@@ -7,7 +7,8 @@ def plotall(mltype,history):
     # plot everything in history
     # history is returned by model.fit
     title_dict = {'binary':'for binary classification',
-                  'center':'for prediction of center'
+                  'center':'for prediction of inclusion center location (x,y)',
+                  'radius':'for prediction of inclusion radius'
                   }
     for ikey in history.history.keys():
         plt.figure(ikey)
@@ -23,8 +24,20 @@ def plotall(mltype,history):
         plt.xlabel('epochs')
         plt.ylabel(ikey)
         plt.grid(True,which='both')
-        plt.savefig('plot_'+ikey+f'_{mltype}'+'.png')
+        plt.savefig(f'{mltype}'+'_plot_'+ikey+'.png')
 
+
+def plotcurves(xdata,ydata,xlabel,ylabel,title,legend=None,fname=None,lw=1):
+    plt.figure(title)
+    for yy in ydata:
+        plt.plot(xdata,yy,linewidth=lw)
+    plt.title(title)
+    plt.xlabel(xlabel)
+    plt.ylabel(ylabel)
+    if (legend is not None):
+        plt.legend(legend)
+    if (fname is not None):
+        plt.savefig(fname)  
 
 def plotfield(xx,yy,field,title,fname):
     plt.figure(title)
@@ -35,3 +48,4 @@ def plotfield(xx,yy,field,title,fname):
     ax.set_aspect('equal')
     plt.savefig(fname)
     plt.close()
+

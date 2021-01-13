@@ -22,12 +22,9 @@ if __name__ =='__main__':
     mltype    = newparams['mltype']
     epochs    = newparams['nepochs']
     prefix    = newparams['prefix']
-    length    = newparams['length']
-    breadth   = newparams['breadth']
 
-    # feature scaling is applied to use prior knowledge about the data
-    # e.g. We know the max and min coordinates of the center
-    # so we can rescale them to be in (0.0,1.0)
+    # no feature scaling is being applied because all quantities are scaled nicely
+    # for the default problem
     
     train_data,valid_data,test_data = get_data( ntrain=ntrain,
                                                 nvalid=nvalid,
@@ -37,42 +34,24 @@ if __name__ =='__main__':
                                                 prefix=prefix
                                                )
 
-    tt = (train_data,valid_data,test_data)
-    
-    train_data_scaled,valid_data_scaled,test_data_scaled = forward_scale_all( datatuple=tt,
-                                                                              length=length,
-                                                                              breadth=breadth
-                                                                             )
-
-    
     cnn = load_or_train_and_plot_cnn( mltype=mltype,
-                                      train_data=train_data_scaled,
-                                      valid_data=valid_data_scaled,
+                                      train_data=train_data,
+                                      valid_data=valid_data,
                                       nnodex=nnodex,
                                       nnodey=nnodey,
                                       epochs=epochs
                                      )
-    
     cnn.summary()
-    
-    prediction = predict_cnn( mltype=mltype,
-                              cnn=cnn,
-                              test_data=test_data_scaled
-                             )
-    
-    prediction_inv = inverse_scale_prediction( mltype=mltype,
-                                               prediction=prediction,
-                                               length=length,
-                                               breadth=breadth
-                                              )
-    save_prediction(mltype=mltype,
-                    prediction=prediction_inv)
+    prediction = predict_and_save_cnn( mltype=mltype,
+                                       cnn=cnn,
+                                       test_data=test_data
+                                      )
     
     postproc = post_process_cnn( mltype=mltype,
                                  ntrain=ntrain,
                                  nvalid=nvalid,
                                  ntest=ntest,
-                                 prediction=prediction_inv,
+                                 prediction=prediction,
                                  test_data=test_data
                                 )
     goodbye()

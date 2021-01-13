@@ -173,14 +173,69 @@ def read_data(start,stop,prefix,nnodex,nnodey,strtype):
 
     return out
 
-# assuming well scaled data - not creating scalers at this time
-def create_scalers(train_data):
-    pass
-    
-def forward_scale_data():
-    pass
+def forward_scale_all(datatuple,length,breadth):
+    # datatuple - tuple containing CNNData to scale
+    ll = []
+    for d in datatuple:
+        ss = forward_scale_data(data=d,
+                                length=length,
+                                breadth=breadth
+                               )
+        ll.append(ss)
 
-def inverse_scale_data():
-    pass
+    return tuple(ll)
 
+def inverse_scale_all(datatuple,length,breadth):
+    # datatuple - tuple containing CNNData to scale
+    ll = []
+    for d in datatuple:
+        ss = inverse_scale_data(data=d,
+                                length=length,
+                                breadth=breadth
+                               )
+        ll.append(ss)
+
+    return tuple(ll)
+        
+
+def forward_scale_data(data,length,breadth):
+    scaled_center = forward_scale_center(data.labels.center,length,breadth)
+    labels = Labels(binary = data.labels.binary,
+                    center = scaled_center,
+                    radius = data.labels.radius,
+                    value  = data.labels.value,
+                    field  = data.labels.field
+                   )
+    return CNNData(images=data.images,
+                   labels=labels
+                   )
+
+def inverse_scale_data(data,length,breadth):
+    scaled_center = inverse_scale_center(data.labels.center,length,breadth)
+    labels = Labels(binary = data.labels.binary,
+                    center = scaled_center,
+                    radius = data.labels.radius,
+                    value  = data.labels.value,
+                    field  = data.labels.field
+                   )
+    return CNNData(images=data.images,
+                   labels=labels
+                   )
+
+def forward_scale_center(centers,length,breadth):
+    scaler_center = np.asarray([length,breadth])
+    scaled_center = centers / scaler_center
+    return scaled_center
+
+def inverse_scale_center(centers,length,breadth):
+    scaler_center = np.asarray([length,breadth])
+    scaled_center = centers * scaler_center
+    return scaled_center
+
+
+def inverse_scale_prediction(mltype,prediction,length,breadth):
+    if (mltype == 'binary'):
+        return prediction
+    if ( mltype == 'center'):
+        return inverse_scale_center(prediction,length,breadth)
 

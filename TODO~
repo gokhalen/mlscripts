@@ -1,4 +1,4 @@
--2) Output example number where binary prediction went wrong
+-2) Checkpointing Keras (saving and resuming training)
 -1) ml.py: Save prediction and add options to only post process 
 0) Check if classification is being carried out correctly
 2) Compute percentages for training examples and total examples separately
