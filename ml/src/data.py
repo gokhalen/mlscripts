@@ -234,8 +234,16 @@ def inverse_scale_center(centers,length,breadth):
 
 
 def inverse_scale_prediction(mltype,prediction,length,breadth):
+
     if (mltype == 'binary'):
         return prediction
-    if ( mltype == 'center'):
+    
+    if (mltype == 'center'):
         return inverse_scale_center(prediction,length,breadth)
+
+    if (mltype == 'radius'):
+        return prediction
+
+    if (mltype == 'value'):
+        return prediction
 

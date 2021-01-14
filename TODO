@@ -1,3 +1,4 @@
+-4) Supplying initial guess to the optimization algorithm
 -3) Reduce indent in JSON to speed up disk IO
 -2) Checkpointing Keras (saving and resuming training)
 -1) ml.py: Save prediction and add options to only post process 

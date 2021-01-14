@@ -3,10 +3,11 @@ import os,numpy as np
 import matplotlib as mpl
 import matplotlib.pyplot as plt
 
+
 from sklearn.metrics import confusion_matrix, accuracy_score
 
 from .datastrc import *
-from .plotting import plotall,plotcurves
+from .plotting import plotall_and_save,plotcurves
 
 # Custom activation function
 # https://stackoverflow.com/questions/43915482/how-do-you-create-a-custom-activation-function-with-keras
@@ -20,19 +21,23 @@ def define_cnn(mltype,nnodex,nnodey):
     # look up table seems to be cleaner than using if statements
     units      = {'binary':1,
                   'center':2,
-                  'radius':1
+                  'radius':1,
+                  'value':1
                   }
     loss       = {'binary':'binary_crossentropy',
                   'center':'mse',
                   'radius':'mse',
+                  'value':'mse'
                   }
     activation = {'binary':'sigmoid',
                   'center':'sigmoid',
-                  'radius':'linear'
+                  'radius':'linear',
+                  'value' :'linear'
                   }
     metrics    = {'binary':['accuracy'],
                   'center':[],
-                  'radius':[]
+                  'radius':[],
+                  'value':[]
                   }
 
     # Initialising the CNN
@@ -54,7 +59,6 @@ def define_cnn(mltype,nnodex,nnodey):
     # Step 5 - Output Layer - mltype is a string which comes out of the params dictionary
     cnn.add(tf.keras.layers.Dense(units=units[mltype], activation=activation[mltype]))
     cnn.compile(optimizer = 'adam', loss = loss[mltype], metrics = metrics[mltype])
-
     
     return cnn
 
@@ -63,7 +67,7 @@ def train_cnn(mltype,cnn,train_data,valid_data,epochs):
     history=cnn.fit(x = train_data.images, y = eval(f'train_data.labels.{mltype}'),
                     validation_data = (valid_data.images,eval(f'valid_data.labels.{mltype}')),
                     epochs = epochs)
-    
+
     return (cnn,history)
 
 def load_or_train_and_plot_cnn(mltype,train_data,valid_data,nnodex,nnodey,epochs):
@@ -80,7 +84,7 @@ def load_or_train_and_plot_cnn(mltype,train_data,valid_data,nnodex,nnodey,epochs
                                 valid_data=valid_data,
                                 epochs=epochs
                                 )
-        plotall(mltype,history)
+        plotall_and_save(mltype,history)
         
         # https://github.com/tensorflow/tensorflow/issues/44178 - Deprecation
         # warnings are nothing to worry about
@@ -108,16 +112,44 @@ def predict_cnn(mltype,cnn,test_data):
     if ( mltype == 'radius'):
         out = out.reshape((-1,))
 
+    if ( mltype == 'value'):
+        out = out.reshape((-1,))
+
     return out
 
 def save_prediction(mltype,prediction):
     np.save(mltype+'_prediction',prediction)
+
+
+def percentages(ytrue,ypred,percen,ntest,msg,logfile):
+    # percen = iterable containing percentages
+    # for every value pp in percen we compute
+    # the number of examples whose relative error
+    # is less than pp
+
+    # msg - message to be appened
+    wrn = f'{__file__}: percentages Check for zero denominator later in rel error calculation...';
+    print(wrn)
+    
+    absrelerr = np.abs((ypred-ytrue)/ytrue)   # not checking for ytrue = 0
+    with open(logfile,'a') as fout:
+        fout.write(wrn+'\n')
+        for pr in percen:
+            nn = np.sum((absrelerr <= pr)*1)
+            outstr = msg + f' {nn} examples out of {ntest} have abs(rel error) <= {pr} {(nn/ntest)*100}%'
+            print(outstr)
+            fout.write(outstr+'\n')
+        
 
 def post_process_cnn(mltype,ntrain,nvalid,ntest,prediction,test_data):
     binary_out = None ;    center_out = None;    radius_out = None
     value_out  = None ;    field_out  = None;
 
     logfile = mltype+'_logfile.txt'
+    if(os.path.exists(logfile)):
+       os.remove(logfile)
+       
+    percen = [0.05,0.10,0.15]
     
     if (mltype == 'binary'):
 
@@ -135,7 +167,7 @@ def post_process_cnn(mltype,ntrain,nvalid,ntest,prediction,test_data):
         if ( idx.size > 0 ):
             notcorrect_message=f'Examples {idx},in test set and {idx+ntrain+nvalid} in global set (0-based indexing) are not classified correctly'
 
-        with open(logfile,'w') as fout:
+        with open(logfile,'a') as fout:
             fout.write(conf_message)
             fout.write(accu_message)
             fout.write(notcorrect_message)
@@ -167,10 +199,8 @@ def post_process_cnn(mltype,ntrain,nvalid,ntest,prediction,test_data):
         plotcurves(xdata=xdata,ydata=[delta[:,1]],xlabel=xlabel,ylabel=ylabel,
                    title=title,legend=None,fname=fname)
 
-        # plot relative error in the x coordinate
-
         print('cnn.py Check for zero denominator later in rel error calculation...')
-        
+               
         absrelx = np.abs(delta[:,0]/test_data.labels.center[:,0])
         absrely = np.abs(delta[:,1]/test_data.labels.center[:,1])
 
@@ -181,8 +211,6 @@ def post_process_cnn(mltype,ntrain,nvalid,ntest,prediction,test_data):
         plotcurves(xdata=xdata,ydata=[absrelx],xlabel=xlabel,ylabel=ylabel,
                    title=title,legend=None,fname=fname)
 
-        # plot rel error in the y coordinate
-        
         ylabel = 'Absolute Relative Error in y coordinate'
         title  = 'Absolute Relative Error in y coordinate'
         fname  = mltype+'_plot_y_relerror'+'.png'        
@@ -190,25 +218,66 @@ def post_process_cnn(mltype,ntrain,nvalid,ntest,prediction,test_data):
         plotcurves(xdata=xdata,ydata=[absrely],xlabel=xlabel,ylabel=ylabel,
                    title=title,legend=None,fname=fname)
 
-        nx = np.sum(( absrelx <= cutoff)*1)
-        ny = np.sum(( absrely <= cutoff)*1)
-
-        outstring1=f'Number of x predictions with abs(relative error) <= {cutoff} = {nx} out of {ntest} {(nx/ntest)*100}%'
-        outstring2=f'Number of y predictions with abs(relative error) <= {cutoff} = {ny} out of {ntest} {(ny/ntest)*100}%'
-
-        print(outstring1)
-        print(outstring2)
-
-        with open(logfile,'w') as fout:
-            fout.write(outstring1+'\n')
-            fout.write(outstring2+'\n')
+        # Calculate number of examples below a specified % rel error for x coord
+        percentages(ytrue=test_data.labels.center[:,0],ypred=prediction[:,0],
+                    percen=percen,ntest=ntest,msg='X-coordinate rel error: ',
+                    logfile=logfile)
+        # Calculate number of examples below a specified % rel error for y coord
+        percentages(ytrue=test_data.labels.center[:,1],ypred=prediction[:,1],
+                    percen=percen,ntest=ntest,msg='Y-coordinate rel error: ',
+                    logfile=logfile)
 
 
     if (mltype == 'radius'):
-        pass
+        xdata  = np.arange(1,ntest+1)
+        delta  = prediction - test_data.labels.radius
+        abserr = np.abs(delta/test_data.labels.radius)
 
+        xlabel = 'No. of test example'
+        ylabel = 'Error in radius (units)'
+        title  = 'Error in radius for test examples'
+        fname  = mltype+'_plot_error'+'.png'
+
+        plotcurves(xdata=xdata,ydata=[delta],xlabel=xlabel,ylabel=ylabel,
+                title=title,legend=None,fname=fname)
+
+        absrelerr = np.abs(delta/test_data.labels.radius)
+        ylabel    = 'Absolute relative error in radius'
+        title     = 'Absolute relative error in radius vs test example number'
+        fname     = mltype+'_plot_abs_rel_error.png'
+
+        plotcurves(xdata=xdata,ydata=[abserr],xlabel=xlabel,ylabel=ylabel,
+                   title=title,legend=None,fname=fname)
+
+        percentages(ytrue=test_data.labels.radius,ypred=prediction,
+                    percen=percen,ntest=ntest,msg='Radius rel error: ',
+                    logfile=logfile)
+        
     if (mltype == 'value'):
-        pass
+        xdata     = np.arange(1,ntest+1)
+        delta     = prediction - test_data.labels.value
+        absrelerr = np.abs(delta/test_data.labels.value)
+
+        xlabel = 'No. of test example'
+        ylabel = 'Error in shear modulus value (units)'
+        title  = 'Error in shear modulus value (units) for test examples'
+        fname  = mltype+'_plot_error'+'.png'
+
+        plotcurves(xdata=xdata,ydata=[delta],xlabel=xlabel,ylabel=ylabel,
+                   title=title,legend=None,fname=fname)
+
+        xlabel = 'No. of test example'
+        ylabel = 'Absolute relative error in shear modulus value (units)'
+        title  = 'Absolute relative error in shear modulus value (units) for test examples'
+        fname  = mltype+'_plot_rel_error'+'.png'
+
+        plotcurves(xdata=xdata,ydata=[absrelerr],xlabel=xlabel,ylabel=ylabel,
+                   title=title,legend=None,fname=fname)
+
+        percentages(ytrue=test_data.labels.value,ypred=prediction,
+                    percen=percen,ntest=ntest,msg='Value rel error: ',
+                    logfile=logfile)
+        
 
     if (mltype =='field'):
         pass

@@ -18,7 +18,7 @@ def get_args():
                         required=False,type=int)
 
     parser.add_argument('--nepochs', help='number of epochs',
-                        required=False,default=12,type=int)
+                        required=False,default=4,type=int)
 
     parser.add_argument('--prefix', help='prefix of data directories',
                         required=False,type=str,default='traindata')
