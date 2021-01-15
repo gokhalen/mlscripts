@@ -1,3 +1,11 @@
+-11) Validation loss is actually increasing with iterations for value prediction
+-10) Saving best weights
+-9) Use the sigmoid function to restrict range of values of mu between mumin and mumax
+-8) Look at other peoples' Network architectures
+-7) Learning rate
+-6) Feature scaling for 'value'
+-5) Checkpointing and restarting the model
+-4) Supplying initial guess to the optimization algorithm
 -3) Reduce indent in JSON to speed up disk IO
 -2) Checkpointing Keras (saving and resuming training)
 -1) ml.py: Save prediction and add options to only post process 

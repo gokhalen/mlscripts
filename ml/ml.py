@@ -5,6 +5,8 @@ from src.data      import *
 from src.cnn       import *
 from src.plotting  import *
 
+import numpy as np
+import sys
 
 if __name__ =='__main__':
     
@@ -24,6 +26,7 @@ if __name__ =='__main__':
     prefix    = newparams['prefix']
     length    = newparams['length']
     breadth   = newparams['breadth']
+    optimizer = newparams['optimizer']
 
     # feature scaling is applied to use prior knowledge about the data
     # e.g. We know the max and min coordinates of the center
@@ -36,21 +39,42 @@ if __name__ =='__main__':
                                                 nnodey=nnodey,
                                                 prefix=prefix
                                                )
+    
 
     tt = (train_data,valid_data,test_data)
-    
-    train_data_scaled,valid_data_scaled,test_data_scaled = forward_scale_all( datatuple=tt,
-                                                                              length=length,
-                                                                              breadth=breadth
-                                                                             )
+
+    valmin  = np.min(train_data.labels.value)
+    valmax  = np.max(train_data.labels.value)
+    valave  = np.mean(train_data.labels.value)
 
     
+
+    # vf = forward_scale_value(train_data.labels.value,valmin=valmin,valmax=valmax,valave=valave)
+    # vi = inverse_scale_value(vf,valmin=valmin,valmax=valmax,valave=valave)
+
+    # print(np.linalg.norm(train_data.labels.value-vi))
+    # sys.exit()
+     
+    train_data_scaled,valid_data_scaled,test_data_scaled = forward_scale_all( datatuple=tt,
+                                                                              length=length,
+                                                                              breadth=breadth,
+                                                                              valmin=valmin,
+                                                                              valmax=valmax,
+                                                                              valave=valave
+                                                                             )
+
+    breakpoint()
+
+    tt=(train_data_scaled,valid_data_scaled,test_data_scaled)
+
+
     cnn = load_or_train_and_plot_cnn( mltype=mltype,
                                       train_data=train_data_scaled,
                                       valid_data=valid_data_scaled,
                                       nnodex=nnodex,
                                       nnodey=nnodey,
-                                      epochs=epochs
+                                      epochs=epochs,
+                                      optimizer=optimizer
                                      )
     
     cnn.summary()
@@ -63,7 +87,10 @@ if __name__ =='__main__':
     prediction_inv = inverse_scale_prediction( mltype=mltype,
                                                prediction=prediction,
                                                length=length,
-                                               breadth=breadth
+                                               breadth=breadth,
+                                               valmin=valmin,
+                                               valmax=valmax,
+                                               valave=valave
                                               )
     save_prediction(mltype=mltype,
                     prediction=prediction_inv)
@@ -76,5 +103,36 @@ if __name__ =='__main__':
                                  test_data=test_data
                                 )
     goodbye()
+
+
+
+    '''
+    (ti,vi,tsi) = inverse_scale_all(datatuple=tt,
+                                    length=length,
+                                    breadth=breadth,
+                                    valmin=valmin,
+                                    valmax=valmax,
+                                    valave=valave
+                                    )
+
+    print('train diff',np.linalg.norm(train_data.labels.binary-ti.labels.binary),
+          np.linalg.norm(train_data.labels.center-ti.labels.center),
+          np.linalg.norm(train_data.labels.radius-ti.labels.radius),
+          np.linalg.norm(train_data.labels.value-ti.labels.value),
+          )
+    
+    print('valid diff',np.linalg.norm(valid_data.labels.binary-vi.labels.binary),
+          np.linalg.norm(valid_data.labels.center-vi.labels.center),
+          np.linalg.norm(valid_data.labels.radius-vi.labels.radius),
+          np.linalg.norm(valid_data.labels.value-vi.labels.value),
+          )
+
+    print('test diff',np.linalg.norm(test_data.labels.binary-tsi.labels.binary),
+          np.linalg.norm(test_data.labels.center-tsi.labels.center),
+          np.linalg.norm(test_data.labels.radius-tsi.labels.radius),
+          np.linalg.norm(test_data.labels.value-tsi.labels.value),
+          )
+    '''
+
 
 

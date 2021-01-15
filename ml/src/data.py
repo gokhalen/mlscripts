@@ -173,49 +173,58 @@ def read_data(start,stop,prefix,nnodex,nnodey,strtype):
 
     return out
 
-def forward_scale_all(datatuple,length,breadth):
+def forward_scale_all(datatuple,length,breadth,valmin,valmax,valave):
     # datatuple - tuple containing CNNData to scale
     ll = []
     for d in datatuple:
         ss = forward_scale_data(data=d,
                                 length=length,
-                                breadth=breadth
+                                breadth=breadth,
+                                valmin=valmin,
+                                valmax=valmax,
+                                valave=valave
                                )
         ll.append(ss)
 
     return tuple(ll)
 
-def inverse_scale_all(datatuple,length,breadth):
+def inverse_scale_all(datatuple,length,breadth,valmin,valmax,valave):
     # datatuple - tuple containing CNNData to scale
     ll = []
     for d in datatuple:
         ss = inverse_scale_data(data=d,
                                 length=length,
-                                breadth=breadth
+                                breadth=breadth,
+                                valmin=valmin,
+                                valmax=valmax,
+                                valave=valave
                                )
         ll.append(ss)
 
     return tuple(ll)
         
 
-def forward_scale_data(data,length,breadth):
+def forward_scale_data(data,length,breadth,valmin,valmax,valave):
     scaled_center = forward_scale_center(data.labels.center,length,breadth)
+    scaled_value  = forward_scale_value(data.labels.value,valmin,valmax,valave)
+    
     labels = Labels(binary = data.labels.binary,
                     center = scaled_center,
                     radius = data.labels.radius,
-                    value  = data.labels.value,
+                    value  = scaled_value,
                     field  = data.labels.field
                    )
     return CNNData(images=data.images,
                    labels=labels
                    )
 
-def inverse_scale_data(data,length,breadth):
+def inverse_scale_data(data,length,breadth,valmin,valmax,valave):
     scaled_center = inverse_scale_center(data.labels.center,length,breadth)
+    scaled_value  = inverse_scale_value(data.labels.value,valmin,valmax,valave)
     labels = Labels(binary = data.labels.binary,
                     center = scaled_center,
                     radius = data.labels.radius,
-                    value  = data.labels.value,
+                    value  = scaled_value,
                     field  = data.labels.field
                    )
     return CNNData(images=data.images,
@@ -232,8 +241,16 @@ def inverse_scale_center(centers,length,breadth):
     scaled_center = centers * scaler_center
     return scaled_center
 
+def forward_scale_value(value,valmin,valmax,valave):
+    assert (valmax != valmin),f'Valmax should not be equal to valmin in __file__'
+    scaled_value = (value - valave)/(valmax - valmin)
+    return scaled_value
 
-def inverse_scale_prediction(mltype,prediction,length,breadth):
+def inverse_scale_value(value,valmin,valmax,valave):
+    unscaled_value = (value*(valmax-valmin) + valave)
+    return unscaled_value
+
+def inverse_scale_prediction(mltype,prediction,length,breadth,valmin,valmax,valave):
 
     if (mltype == 'binary'):
         return prediction
@@ -245,5 +262,5 @@ def inverse_scale_prediction(mltype,prediction,length,breadth):
         return prediction
 
     if (mltype == 'value'):
-        return prediction
+        return inverse_scale_value(prediction,valmin=valmin,valmax=valmax,valave=valave)
 

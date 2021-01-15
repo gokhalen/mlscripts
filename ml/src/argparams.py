@@ -23,6 +23,11 @@ def get_args():
     parser.add_argument('--prefix', help='prefix of data directories',
                         required=False,type=str,default='traindata')
 
+    # optimizer
+    parser.add_argument('--optimizer', help='name of optimizer',
+                        required=False,type=str,default='adam',
+                        choices=['sgd','rmsprop','adam','adadelta','adagrad','adamax','nadam','ftrl'])
+
     args = parser.parse_args()
     return args
 
@@ -48,7 +53,8 @@ def update_params(params,args):
     if (args.ntrain != None) or (args.nvalid !=None) or (args.ntest != None):
         newparams['ntotal'] = newparams['ntrain'] + newparams['nvalid'] + newparams['ntest']
 
-    newparams['mltype']  = args.mltype
-    newparams['nepochs'] = args.nepochs
+    newparams['mltype']    = args.mltype
+    newparams['nepochs']   = args.nepochs
+    newparams['optimizer'] = args.optimizer
         
     return newparams

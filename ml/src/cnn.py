@@ -9,11 +9,13 @@ from sklearn.metrics import confusion_matrix, accuracy_score
 from .datastrc import *
 from .plotting import plotall_and_save,plotcurves
 
+
+
 # Custom activation function
 # https://stackoverflow.com/questions/43915482/how-do-you-create-a-custom-activation-function-with-keras
 # https://keras.io/api/layers/activations/
 
-def define_cnn(mltype,nnodex,nnodey):
+def define_cnn(mltype,nnodex,nnodey,optimizer):
     ndim = 2 # number of displacement components.
 
     # lookup table to define output layer (units and activation)
@@ -40,25 +42,51 @@ def define_cnn(mltype,nnodex,nnodey):
                   'value':[]
                   }
 
+    regularizers = {'binary':None,
+                    'center':None,
+                    'radius':None,
+                    'value':tf.keras.regularizers.l2(0.001),
+                   }
+
+    
+    
     # Initialising the CNN
     cnn    = tf.keras.models.Sequential()
+    
     # Step 1 - Convolution
-    cnn.add(tf.keras.layers.Conv2D(filters=32, kernel_size=3, activation='relu',
-                                       input_shape=[nnodey, nnodex, 2]))
+    conv2d_layer_1 = tf.keras.layers.Conv2D(
+                                            filters=32, kernel_size=3, activation='relu',
+                                            input_shape=[nnodey, nnodex, 2],
+                                            kernel_regularizer=regularizers[mltype]
+                                            )
+
+    cnn.add(conv2d_layer_1)
     # Step 2 - Pooling
     cnn.add(tf.keras.layers.MaxPool2D(pool_size=2, strides=2))
 
     # Another convolutional layer
-    cnn.add(tf.keras.layers.Conv2D(filters=64, kernel_size=3, activation='relu'))
+    conv2d_layer_2 = tf.keras.layers.Conv2D(filters=64, kernel_size=3, activation='relu',
+                                            kernel_regularizer=regularizers[mltype]
+                                            )
+    cnn.add(conv2d_layer_2)
     cnn.add(tf.keras.layers.MaxPool2D(pool_size=2, strides=2))
     
     # Step 3 - Flattening 
     cnn.add(tf.keras.layers.Flatten())
+    
     # Step 4 - Full Connection
-    cnn.add(tf.keras.layers.Dense(units=128, activation='relu'))
+    dense_layer_1 = tf.keras.layers.Dense(units=128, activation='relu',
+                                          kernel_regularizer=regularizers[mltype])
+    cnn.add(dense_layer_1)
+    
     # Step 5 - Output Layer - mltype is a string which comes out of the params dictionary
-    cnn.add(tf.keras.layers.Dense(units=units[mltype], activation=activation[mltype]))
-    cnn.compile(optimizer = 'adam', loss = loss[mltype], metrics = metrics[mltype])
+    dense_layer_2 = tf.keras.layers.Dense(units=units[mltype], activation=activation[mltype],
+                                          kernel_regularizer=regularizers[mltype])
+    cnn.add(dense_layer_2)
+
+    opt = tf.keras.optimizers.Adam()
+
+    cnn.compile(optimizer = opt, loss = loss[mltype], metrics = metrics[mltype])
     
     return cnn
 
@@ -68,16 +96,17 @@ def train_cnn(mltype,cnn,train_data,valid_data,epochs):
                     validation_data = (valid_data.images,eval(f'valid_data.labels.{mltype}')),
                     epochs = epochs)
 
+
     return (cnn,history)
 
-def load_or_train_and_plot_cnn(mltype,train_data,valid_data,nnodex,nnodey,epochs):
+def load_or_train_and_plot_cnn(mltype,train_data,valid_data,nnodex,nnodey,epochs,optimizer):
     
     # load old model if exists else create new model,train it and save it
     if (os.path.exists(mltype)):
         print('-'*80,f'\n Old model for mltype={mltype} exists...loading old model\n','-'*80,sep='')
         cnn=tf.keras.models.load_model(mltype)
     else:
-        cnn         = define_cnn(mltype,nnodex,nnodey)
+        cnn         = define_cnn(mltype,nnodex,nnodey,optimizer)
         cnn,history = train_cnn(mltype=mltype,
                                 cnn=cnn,
                                 train_data=train_data,
@@ -149,7 +178,7 @@ def post_process_cnn(mltype,ntrain,nvalid,ntest,prediction,test_data):
     if(os.path.exists(logfile)):
        os.remove(logfile)
        
-    percen = [0.05,0.10,0.15]
+    percen = [0.05,0.10,0.15,0.2,0.25,0.3,0.35]
     
     if (mltype == 'binary'):
 
