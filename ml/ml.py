@@ -47,6 +47,10 @@ if __name__ =='__main__':
     valmax  = np.max(train_data.labels.value)
     valave  = np.mean(train_data.labels.value)
 
+    valmin = 0
+    valmax = 1
+    valave = 0
+
     
 
     # vf = forward_scale_value(train_data.labels.value,valmin=valmin,valmax=valmax,valave=valave)
@@ -63,7 +67,6 @@ if __name__ =='__main__':
                                                                               valave=valave
                                                                              )
 
-    breakpoint()
 
     tt=(train_data_scaled,valid_data_scaled,test_data_scaled)
 
@@ -83,6 +86,7 @@ if __name__ =='__main__':
                               cnn=cnn,
                               test_data=test_data_scaled
                              )
+
     
     prediction_inv = inverse_scale_prediction( mltype=mltype,
                                                prediction=prediction,

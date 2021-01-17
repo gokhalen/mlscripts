@@ -2,6 +2,7 @@ import tensorflow as tf
 import os,numpy as np
 import matplotlib as mpl
 import matplotlib.pyplot as plt
+import sys
 
 
 from sklearn.metrics import confusion_matrix, accuracy_score
@@ -29,7 +30,7 @@ def define_cnn(mltype,nnodex,nnodey,optimizer):
     loss       = {'binary':'binary_crossentropy',
                   'center':'mse',
                   'radius':'mse',
-                  'value':'mse'
+                  'value':'logcosh'
                   }
     activation = {'binary':'sigmoid',
                   'center':'sigmoid',
@@ -45,10 +46,8 @@ def define_cnn(mltype,nnodex,nnodey,optimizer):
     regularizers = {'binary':None,
                     'center':None,
                     'radius':None,
-                    'value':tf.keras.regularizers.l2(0.001),
+                    'value':tf.keras.regularizers.l2(0),
                    }
-
-    
     
     # Initialising the CNN
     cnn    = tf.keras.models.Sequential()
@@ -70,7 +69,7 @@ def define_cnn(mltype,nnodex,nnodey,optimizer):
                                             )
     cnn.add(conv2d_layer_2)
     cnn.add(tf.keras.layers.MaxPool2D(pool_size=2, strides=2))
-    
+
     # Step 3 - Flattening 
     cnn.add(tf.keras.layers.Flatten())
     
@@ -90,12 +89,53 @@ def define_cnn(mltype,nnodex,nnodey,optimizer):
     
     return cnn
 
+
+def define_cnn_value(mltype,nnodex,nnodey,optimizer):
+    ndim = 2
+    
+    # Initialising the CNN
+    cnn    = tf.keras.models.Sequential()
+    
+    # Step 1 - Convolution
+    # conv2d_layer_1 = tf.keras.layers.Conv2D(
+    # filters=3, kernel_size=16, activation='relu',
+    #                                        input_shape=[nnodey, nnodex, 2],
+    #                                        kernel_regularizer=None
+    #                                        )
+    # cnn.add(conv2d_layer_1)
+    # Step 2 - Pooling
+    # cnn.add(tf.keras.layers.MaxPool2D(pool_size=8, strides=1))
+    # Step 3 - Flattening
+
+    cnn.add(tf.keras.Input(shape=(nnodey,nnodex,2)))
+    
+    
+    cnn.add(tf.keras.layers.Flatten())
+
+    # dense_layer_1 = tf.keras.Dense(
+        
+    # Step 5 - Output Layer - mltype is a string which comes out of the params dictionary
+    dense_layer_2 = tf.keras.layers.Dense(units=1, activation='linear',
+                                          kernel_regularizer=None,
+                                          kernel_initializer=tf.keras.initializers.RandomNormal(stddev=100.0)
+                                          )
+
+    cnn.add(dense_layer_2)
+    cnn.compile(optimizer = 'rmsprop', loss = 'mse', metrics = [])
+    
+    return cnn
+
+
+
 def train_cnn(mltype,cnn,train_data,valid_data,epochs):
     # we're using eval and consistent definition of attributes to escape writing lots of if statements
-    history=cnn.fit(x = train_data.images, y = eval(f'train_data.labels.{mltype}'),
-                    validation_data = (valid_data.images,eval(f'valid_data.labels.{mltype}')),
-                    epochs = epochs)
 
+    
+    history=cnn.fit( x = train_data.images,
+                     y = eval(f'train_data.labels.{mltype}'),
+                     validation_data = (valid_data.images,eval(f'valid_data.labels.{mltype}')),
+                     epochs = epochs
+                    )
 
     return (cnn,history)
 
@@ -106,7 +146,13 @@ def load_or_train_and_plot_cnn(mltype,train_data,valid_data,nnodex,nnodey,epochs
         print('-'*80,f'\n Old model for mltype={mltype} exists...loading old model\n','-'*80,sep='')
         cnn=tf.keras.models.load_model(mltype)
     else:
-        cnn         = define_cnn(mltype,nnodex,nnodey,optimizer)
+        if ( mltype != 'value'):
+            cnn = define_cnn(mltype,nnodex,nnodey,optimizer)
+
+        if ( mltype == 'value'):
+            cnn = define_cnn_value(mltype,nnodex,nnodey,optimizer)
+
+            
         cnn,history = train_cnn(mltype=mltype,
                                 cnn=cnn,
                                 train_data=train_data,
