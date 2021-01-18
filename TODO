@@ -1,3 +1,4 @@
+-5000) Saving best weights
 
 -101) Check if strain images can predict stiffness (np.diff)
 -100) Post Process all data sets (ntrain,ntest,nvalid)
@@ -8,7 +9,6 @@
 
 
 -11) Validation loss is actually increasing with iterations for value prediction
--10) Saving best weights
 -9) Use the sigmoid function to restrict range of values of mu between mumin and mumax
 -8) Look at other peoples' Network architectures
 -7) Learning rate

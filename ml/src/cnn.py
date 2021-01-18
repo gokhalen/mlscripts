@@ -6,18 +6,20 @@ import sys
 
 
 from sklearn.metrics import confusion_matrix, accuracy_score
-
 from .datastrc import *
 from .plotting import plotall_and_save,plotcurves
-
+from .config   import outputdir
 
 
 # Custom activation function
 # https://stackoverflow.com/questions/43915482/how-do-you-create-a-custom-activation-function-with-keras
 # https://keras.io/api/layers/activations/
 
-def define_cnn(mltype,nnodex,nnodey,optimizer):
-    ndim = 2 # number of displacement components.
+def define_cnn(mltype,iptype,nnodex,nnodey,optimizer):
+    if ( iptype == 'images'):
+        nchannel = 2
+    if ( iptype == 'strain'): 
+        nchannel = 3 # number of displacement components.
 
     # lookup table to define output layer (units and activation)
     # and loss and other metrics to evaluate
@@ -30,7 +32,7 @@ def define_cnn(mltype,nnodex,nnodey,optimizer):
     loss       = {'binary':'binary_crossentropy',
                   'center':'mse',
                   'radius':'mse',
-                  'value':'logcosh'
+                  'value':'mse'
                   }
     activation = {'binary':'sigmoid',
                   'center':'sigmoid',
@@ -55,7 +57,7 @@ def define_cnn(mltype,nnodex,nnodey,optimizer):
     # Step 1 - Convolution
     conv2d_layer_1 = tf.keras.layers.Conv2D(
                                             filters=32, kernel_size=3, activation='relu',
-                                            input_shape=[nnodey, nnodex, 2],
+                                            input_shape=[nnodey, nnodex, nchannel],
                                             kernel_regularizer=regularizers[mltype]
                                             )
 
@@ -91,6 +93,7 @@ def define_cnn(mltype,nnodex,nnodey,optimizer):
 
 
 def define_cnn_value(mltype,nnodex,nnodey,optimizer):
+    
     ndim = 2
     
     # Initialising the CNN
@@ -127,56 +130,60 @@ def define_cnn_value(mltype,nnodex,nnodey,optimizer):
 
 
 
-def train_cnn(mltype,cnn,train_data,valid_data,epochs):
+def train_cnn(mltype,iptype,cnn,train_data,valid_data,epochs):
     # we're using eval and consistent definition of attributes to escape writing lots of if statements
 
     
-    history=cnn.fit( x = train_data.images,
+    history=cnn.fit( x = eval(f'train_data.{iptype}'),
                      y = eval(f'train_data.labels.{mltype}'),
-                     validation_data = (valid_data.images,eval(f'valid_data.labels.{mltype}')),
+                     validation_data = (eval(f'valid_data.{iptype}'),eval(f'valid_data.labels.{mltype}')),
                      epochs = epochs
                     )
 
     return (cnn,history)
 
-def load_or_train_and_plot_cnn(mltype,train_data,valid_data,nnodex,nnodey,epochs,optimizer):
-    
+def load_or_train_and_plot_cnn(mltype,iptype,train_data,valid_data,nnodex,nnodey,epochs,optimizer):
+    model_dir = mltype+'_'+iptype+'_model'
+    if ( not os.path.exists(outputdir)):
+        os.mkdir(outputdir)
+        
     # load old model if exists else create new model,train it and save it
-    if (os.path.exists(mltype)):
+    if (os.path.exists(model_dir)):
         print('-'*80,f'\n Old model for mltype={mltype} exists...loading old model\n','-'*80,sep='')
-        cnn=tf.keras.models.load_model(mltype)
+        cnn=tf.keras.models.load_model(model_dir)
     else:
-        if ( mltype != 'value'):
-            cnn = define_cnn(mltype,nnodex,nnodey,optimizer)
+        cnn = define_cnn(mltype,iptype,nnodex,nnodey,optimizer)
 
-        if ( mltype == 'value'):
-            cnn = define_cnn_value(mltype,nnodex,nnodey,optimizer)
+        #if ( mltype == 'value'):
+        #    cnn = define_cnn_value(mltype,nnodex,nnodey,optimizer)
 
             
         cnn,history = train_cnn(mltype=mltype,
+                                iptype=iptype,
                                 cnn=cnn,
                                 train_data=train_data,
                                 valid_data=valid_data,
                                 epochs=epochs
                                 )
-        plotall_and_save(mltype,history)
+        
+        plotall_and_save(mltype,iptype,history)
         
         # https://github.com/tensorflow/tensorflow/issues/44178 - Deprecation
         # warnings are nothing to worry about
-        tf.keras.models.save_model(model=cnn,filepath=mltype,overwrite=True,include_optimizer=True)
+        tf.keras.models.save_model(model=cnn,filepath=model_dir,overwrite=True,include_optimizer=True)
 
 
         # plot
     tf.keras.utils.plot_model(
-            cnn, to_file=f'{mltype}_model.png', show_shapes=True, show_layer_names=True,
+            cnn, to_file=f'{outputdir}/{mltype}_{iptype}_model.png', show_shapes=True, show_layer_names=True,
             rankdir='TB', expand_nested=False, dpi=256
     )
         
     return cnn
 
 
-def predict_cnn(mltype,cnn,test_data):
-    out = cnn.predict(test_data.images)
+def predict_cnn(mltype,iptype,cnn,test_data):
+    out = cnn.predict(eval(f'test_data.{iptype}'))
     if ( mltype == 'binary'):
         out = out > 0.5
         out = out.reshape((-1,))
@@ -192,8 +199,10 @@ def predict_cnn(mltype,cnn,test_data):
 
     return out
 
-def save_prediction(mltype,prediction):
-    np.save(mltype+'_prediction',prediction)
+def save_prediction(mltype,iptype,prediction,outputdir=outputdir):
+    if ( not os.path.exists(outputdir)):
+        os.mkdir(outputdir)
+    np.save(outputdir+'/'+mltype+'_'+iptype+'_prediction',prediction)
 
 
 def percentages(ytrue,ypred,percen,ntest,msg,logfile):
@@ -216,13 +225,17 @@ def percentages(ytrue,ypred,percen,ntest,msg,logfile):
             fout.write(outstr+'\n')
         
 
-def post_process_cnn(mltype,ntrain,nvalid,ntest,prediction,test_data):
+def post_process_cnn(mltype,iptype,ntrain,nvalid,ntest,prediction,test_data,outputdir=outputdir):
     binary_out = None ;    center_out = None;    radius_out = None
     value_out  = None ;    field_out  = None;
 
-    logfile = mltype+'_logfile.txt'
-    if(os.path.exists(logfile)):
-       os.remove(logfile)
+    logfile = outputdir+'/'+mltype+'_'+iptype+'_logfile.txt'
+    
+    if ( os.path.exists(logfile) ):
+        os.remove(logfile)
+        
+    if ( not os.path.exists(outputdir)):
+        os.mkdir(outputdir)
        
     percen = [0.05,0.10,0.15,0.2,0.25,0.3,0.35]
     
@@ -261,7 +274,7 @@ def post_process_cnn(mltype,ntrain,nvalid,ntest,prediction,test_data):
         xlabel = 'No. of test example'
         ylabel = 'Error in x coordinate (units)'
         title  = 'Error in x coordinate for test examples'
-        fname  = mltype+'_plot_x_error'+'.png'
+        fname  = mltype+'_'+iptype+'_plot_x_error'+'.png'
         
         plotcurves(xdata=xdata,ydata=[delta[:,0]],xlabel=xlabel,ylabel=ylabel,
                    title=title,legend=None,fname=fname)
@@ -269,7 +282,7 @@ def post_process_cnn(mltype,ntrain,nvalid,ntest,prediction,test_data):
         # plot error in y coordinate
         ylabel = 'Error in y coordinate (units)'
         title  = 'Error in y coordinate for test examples'
-        fname  = mltype+'_plot_y_error'+'.png'
+        fname  = mltype+'_'+iptype+'_plot_y_error'+'.png'
 
         plotcurves(xdata=xdata,ydata=[delta[:,1]],xlabel=xlabel,ylabel=ylabel,
                    title=title,legend=None,fname=fname)
@@ -281,14 +294,14 @@ def post_process_cnn(mltype,ntrain,nvalid,ntest,prediction,test_data):
 
         ylabel = 'Absolute Relative Error in x coordinate'
         title  = 'Absolute Relative Error in x coordinate'
-        fname  = mltype+'_plot_x_relerror'+'.png'        
+        fname  = mltype+'_'+iptype+'_plot_x_relerror'+'.png'        
 
         plotcurves(xdata=xdata,ydata=[absrelx],xlabel=xlabel,ylabel=ylabel,
                    title=title,legend=None,fname=fname)
 
         ylabel = 'Absolute Relative Error in y coordinate'
         title  = 'Absolute Relative Error in y coordinate'
-        fname  = mltype+'_plot_y_relerror'+'.png'        
+        fname  = mltype+'_'+iptype+'_plot_y_relerror'+'.png'        
 
         plotcurves(xdata=xdata,ydata=[absrely],xlabel=xlabel,ylabel=ylabel,
                    title=title,legend=None,fname=fname)
@@ -311,7 +324,7 @@ def post_process_cnn(mltype,ntrain,nvalid,ntest,prediction,test_data):
         xlabel = 'No. of test example'
         ylabel = 'Error in radius (units)'
         title  = 'Error in radius for test examples'
-        fname  = mltype+'_plot_error'+'.png'
+        fname  = mltype+'_'+iptype+'_plot_error'+'.png'
 
         plotcurves(xdata=xdata,ydata=[delta],xlabel=xlabel,ylabel=ylabel,
                 title=title,legend=None,fname=fname)
@@ -319,7 +332,7 @@ def post_process_cnn(mltype,ntrain,nvalid,ntest,prediction,test_data):
         absrelerr = np.abs(delta/test_data.labels.radius)
         ylabel    = 'Absolute relative error in radius'
         title     = 'Absolute relative error in radius vs test example number'
-        fname     = mltype+'_plot_abs_rel_error.png'
+        fname     = mltype+'_'+iptype+'_plot_abs_rel_error.png'
 
         plotcurves(xdata=xdata,ydata=[abserr],xlabel=xlabel,ylabel=ylabel,
                    title=title,legend=None,fname=fname)
@@ -336,7 +349,7 @@ def post_process_cnn(mltype,ntrain,nvalid,ntest,prediction,test_data):
         xlabel = 'No. of test example'
         ylabel = 'Error in shear modulus value (units)'
         title  = 'Error in shear modulus value (units) for test examples'
-        fname  = mltype+'_plot_error'+'.png'
+        fname  = mltype+'_'+iptype+'_plot_error'+'.png'
 
         plotcurves(xdata=xdata,ydata=[delta],xlabel=xlabel,ylabel=ylabel,
                    title=title,legend=None,fname=fname)
@@ -344,10 +357,21 @@ def post_process_cnn(mltype,ntrain,nvalid,ntest,prediction,test_data):
         xlabel = 'No. of test example'
         ylabel = 'Absolute relative error in shear modulus value (units)'
         title  = 'Absolute relative error in shear modulus value (units) for test examples'
-        fname  = mltype+'_plot_rel_error'+'.png'
+        fname  = mltype+'_'+iptype+'_plot_rel_error'+'.png'
 
         plotcurves(xdata=xdata,ydata=[absrelerr],xlabel=xlabel,ylabel=ylabel,
                    title=title,legend=None,fname=fname)
+
+        xlabel = 'No. of test example'
+        ylabel = 'Shear modulus'
+        title  = 'True and predicted shear modulus (units) for test examples'
+        fname  = mltype+'_'+iptype+'_plot_mod_comparison'+'.png'
+
+        plotcurves(xdata=xdata,ydata=[prediction,test_data.labels.value],
+                   xlabel=xlabel,ylabel=ylabel,
+                   title=title,legend=['prediction','true'],
+                   fname=fname)
+                
 
         percentages(ytrue=test_data.labels.value,ypred=prediction,
                     percen=percen,ntest=ntest,msg='Value rel error: ',

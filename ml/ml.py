@@ -22,6 +22,7 @@ if __name__ =='__main__':
     nnodex    = newparams['nelemx']+1;
     nnodey    = newparams['nelemy']+1;
     mltype    = newparams['mltype']
+    iptype    = newparams['iptype']
     epochs    = newparams['nepochs']
     prefix    = newparams['prefix']
     length    = newparams['length']
@@ -47,6 +48,7 @@ if __name__ =='__main__':
     valmax  = np.max(train_data.labels.value)
     valave  = np.mean(train_data.labels.value)
 
+    # skip scaling for mu value 
     valmin = 0
     valmax = 1
     valave = 0
@@ -72,6 +74,7 @@ if __name__ =='__main__':
 
 
     cnn = load_or_train_and_plot_cnn( mltype=mltype,
+                                      iptype=iptype,
                                       train_data=train_data_scaled,
                                       valid_data=valid_data_scaled,
                                       nnodex=nnodex,
@@ -79,13 +82,15 @@ if __name__ =='__main__':
                                       epochs=epochs,
                                       optimizer=optimizer
                                      )
-    
+
     cnn.summary()
     
     prediction = predict_cnn( mltype=mltype,
+                              iptype=iptype,
                               cnn=cnn,
                               test_data=test_data_scaled
                              )
+
 
     
     prediction_inv = inverse_scale_prediction( mltype=mltype,
@@ -97,15 +102,20 @@ if __name__ =='__main__':
                                                valave=valave
                                               )
     save_prediction(mltype=mltype,
+                    iptype=iptype,
                     prediction=prediction_inv)
+
+
     
     postproc = post_process_cnn( mltype=mltype,
+                                 iptype=iptype,
                                  ntrain=ntrain,
                                  nvalid=nvalid,
                                  ntest=ntest,
                                  prediction=prediction_inv,
                                  test_data=test_data
                                 )
+
     goodbye()
 
 

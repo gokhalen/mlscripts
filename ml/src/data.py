@@ -20,7 +20,8 @@ def split_cnndata(cnndata,start,stop):
                     field  = cnndata.labels.field[start:stop,...]
                     )
     out    = CNNData(images=cnndata.images[start:stop,...],
-                  labels=labels)
+                     strain=cnndata.strain[start:stop,...],
+                     labels=labels)
     return out
 
 def get_data(ntrain,nvalid,ntest,nnodex,nnodey,prefix):
@@ -68,8 +69,9 @@ def get_data(ntrain,nvalid,ntest,nnodex,nnodey,prefix):
                         value=value,
                         field=field
                        )
-        
-        full_data = CNNData(images=images,labels=labels)
+
+        strain    = np.load('strain.npy')
+        full_data = CNNData(images=images,strain=strain,labels=labels)
     else:
         print('-'*80,f'\nPreviously created files not found, processing data and creating .npy files\n','-'*80,sep='')
         # https://stackoverflow.com/questions/973473/getting-a-list-of-all-subdirectories-in-the-current-directory?rq=1
@@ -167,9 +169,10 @@ def read_data(start,stop,prefix,nnodex,nnodey,strtype):
     _h      = listbin.count(0)
     _nh     = listbin.count(1)
     
-    print(f'Found {_nh} non-homogeneous and {_h} homogeneous examples out of a total {_nh+_h}')            
-    ll  = Labels(binary=binary_label,center=center_label,radius=radius_label,value=mu_label,field=field_label)
-    out = CNNData(images=images,labels=ll)
+    print(f'Found {_nh} non-homogeneous and {_h} homogeneous examples out of a total {_nh+_h}')
+    strain = np.load('strain.npy')
+    ll     = Labels(binary=binary_label,center=center_label,radius=radius_label,value=mu_label,field=field_label)
+    out    = CNNData(images=images,strain=strain,labels=ll)
 
     return out
 
@@ -215,6 +218,7 @@ def forward_scale_data(data,length,breadth,valmin,valmax,valave):
                     field  = data.labels.field
                    )
     return CNNData(images=data.images,
+                   strain=data.strain,
                    labels=labels
                    )
 
@@ -228,6 +232,7 @@ def inverse_scale_data(data,length,breadth,valmin,valmax,valave):
                     field  = data.labels.field
                    )
     return CNNData(images=data.images,
+                   strain=data.strain,
                    labels=labels
                    )
 

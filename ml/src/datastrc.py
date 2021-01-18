@@ -7,6 +7,6 @@ from .config import mltypelist
 # value  = [:] value of the stiffness / shear modulus
 
 Labels         = namedtuple('Labels', mltypelist)
-CNNData        = namedtuple('CNNData',['images','labels'])
+CNNData        = namedtuple('CNNData',['images','strain','labels'])
 PostData       = namedtuple('PostData',mltypelist)
 BinaryPostData = namedtuple('BinaryPostData',['accu_score','conf_matrix']) 
