@@ -5,7 +5,7 @@
 -99)  Regularization for layers
 
 
-
+-40) Modify mlsetup to deal with strains
 
 
 -11) Validation loss is actually increasing with iterations for value prediction

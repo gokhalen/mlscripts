@@ -15,6 +15,25 @@ from .config   import outputdir
 # https://stackoverflow.com/questions/43915482/how-do-you-create-a-custom-activation-function-with-keras
 # https://keras.io/api/layers/activations/
 
+
+def get_checkpoint(mltype,chkdir):
+    # https://keras.io/api/callbacks/model_checkpoint/
+    if (mltype == 'binary'):
+        monitor = 'val_accuracy'
+    else:
+        monitor = 'val_loss'
+
+    chkpnt = tf.keras.callbacks.ModelCheckpoint(filepath=chkdir,
+                                                save_weights_only=False,
+                                                monitor=monitor,
+                                                verbose=0,
+                                                mode='auto',
+                                                save_best_only=True
+                                               )
+
+    return [chkpnt]
+    
+
 def define_cnn(mltype,iptype,nnodex,nnodey,optimizer):
     if ( iptype == 'images'):
         nchannel = 2
@@ -130,20 +149,25 @@ def define_cnn_value(mltype,nnodex,nnodey,optimizer):
 
 
 
-def train_cnn(mltype,iptype,cnn,train_data,valid_data,epochs):
+def train_cnn(mltype,iptype,cnn,train_data,valid_data,epochs,callback_list):
     # we're using eval and consistent definition of attributes to escape writing lots of if statements
 
     
     history=cnn.fit( x = eval(f'train_data.{iptype}'),
                      y = eval(f'train_data.labels.{mltype}'),
                      validation_data = (eval(f'valid_data.{iptype}'),eval(f'valid_data.labels.{mltype}')),
-                     epochs = epochs
+                     epochs    = epochs,
+                     callbacks = callback_list
                     )
 
     return (cnn,history)
 
 def load_or_train_and_plot_cnn(mltype,iptype,train_data,valid_data,nnodex,nnodey,epochs,optimizer):
     model_dir = mltype+'_'+iptype+'_model'
+    check_dir = mltype+'_'+iptype+'_check_model'
+
+    callback_list = get_checkpoint(mltype=mltype,chkdir=check_dir)
+    
     if ( not os.path.exists(outputdir)):
         os.mkdir(outputdir)
         
@@ -163,7 +187,8 @@ def load_or_train_and_plot_cnn(mltype,iptype,train_data,valid_data,nnodex,nnodey
                                 cnn=cnn,
                                 train_data=train_data,
                                 valid_data=valid_data,
-                                epochs=epochs
+                                epochs=epochs,
+                                callback_list=callback_list
                                 )
         
         plotall_and_save(mltype,iptype,history)
