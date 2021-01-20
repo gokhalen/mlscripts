@@ -11,6 +11,10 @@ from .config   import mltypelist
 from sklearn.preprocessing import StandardScaler
 
 
+def make_strain(dispfile,prefix,nnodex,nnodey):
+    pass
+
+
 def split_cnndata(cnndata,start,stop):
     assert(stop > start),'stop should be > start in split_cnndata'
     labels = Labels(binary = cnndata.labels.binary[start:stop,...],
@@ -24,7 +28,7 @@ def split_cnndata(cnndata,start,stop):
                      labels=labels)
     return out
 
-def get_data(ntrain,nvalid,ntest,nnodex,nnodey,prefix):
+def get_data(ntrain,nvalid,ntest,nnodex,nnodey,prefix,outputdir):
     # reads training,validation and test data and returns it
     # prefix is the prefix of the directories which contain training validation and test data
     # ntrain,nvalid,ntest are integers and should sum up to less than the number of files
@@ -62,7 +66,6 @@ def get_data(ntrain,nvalid,ntest,nnodex,nnodey,prefix):
 
         assert ( images.shape[0] >= nsum ), 'Not enough training examples in saved files'
         
-
         labels = Labels(binary=binary,
                         center=center,
                         radius=radius,
@@ -79,8 +82,9 @@ def get_data(ntrain,nvalid,ntest,nnodex,nnodey,prefix):
         gg = glob.glob(f'{prefix}*/')  # get directories starting with prefix
         ntotal = len(gg);
         assert (ntotal >= nsum),'Number of examples not sufficient'
-        full_data  = read_data(0,nsum,prefix,nnodex,nnodey,'full_data')
+        full_data  = read_data(0,nsum,prefix,nnodex,nnodey,'full_data',outputdir=outputdir)
         np.save('images',full_data.images)
+        np.save('strain',full_data.strain)
         np.save('binary',full_data.labels.binary)
         np.save('center',full_data.labels.center)
         np.save('radius',full_data.labels.radius)
@@ -95,7 +99,7 @@ def get_data(ntrain,nvalid,ntest,nnodex,nnodey,prefix):
     return train_data,valid_data,test_data
 
 
-def read_data(start,stop,prefix,nnodex,nnodey,strtype):
+def read_data(start,stop,prefix,nnodex,nnodey,strtype,outputdir):
     # get ndime - better be consistent across all training examples.
     inputname  = prefix+'0/input0.json.in';
     with open(inputname,'r') as fin:
@@ -105,9 +109,19 @@ def read_data(start,stop,prefix,nnodex,nnodey,strtype):
         # do not .reshape(nnodey,nnodex)
         xx    = coord[:,0].reshape(nnodex,nnodey).T
         yy    = coord[:,1].reshape(nnodex,nnodey).T
+        xmin  = np.min(coord[:,0])
+        xmax  = np.max(coord[:,0])
+        ymin  = np.min(coord[:,1])
+        ymax  = np.max(coord[:,1])
+
+    nelemx = nnodex - 1
+    nelemy = nnodey - 1
+    dx = (xmax-xmin)/nelemx
+    dy = (ymax-ymin)/nelemy
     
     nexamples    = stop - start
     images       = np.empty((nexamples,nnodey,nnodex,ndime),dtype='float64')
+    strain       = np.empty((nexamples,nnodey,nnodex,ndime+1),dtype='float64')
     binary_label = np.empty((nexamples,),dtype='int64')
     center_label = np.empty((nexamples,2),dtype='float64')
     radius_label = np.empty((nexamples,),dtype='float64')
@@ -121,10 +135,10 @@ def read_data(start,stop,prefix,nnodex,nnodey,strtype):
         outputname = prefix+str(ii)+'/output'+str(ii)+'.json.out';
         inputname  = prefix+str(ii)+'/input'+str(ii)+'.json.in';
         
-        outsolx = prefix+str(ii)+'/uxml'+str(ii)+'.png';
-        outsoly = prefix+str(ii)+'/uyml'+str(ii)+'.png';
-        outlam  = prefix+str(ii)+'/lamml'+str(ii)+'.png';
-        outmu   = prefix+str(ii)+'/muml'+str(ii)+'.png';
+        outsolx = '/uxml'+str(ii)+'.png';
+        outsoly = '/uyml'+str(ii)+'.png';
+        outlam  = '/lamml'+str(ii)+'.png';
+        outmu   = '/muml'+str(ii)+'.png';
         
         with open(mlinfoname,'r') as fin:
             dd = json.load(fin)
@@ -139,7 +153,8 @@ def read_data(start,stop,prefix,nnodex,nnodey,strtype):
                 center_label[iloc] = -1.0,-1.0
                 print('WARNING: Homogeneous radius_label set to -1.0')
                 radius_label[iloc] = -1.0
-        # get solution (displacement data)
+                
+        # get displacement data and strain data
         with open(outputname,'r') as fin:
             dd   = json.load(fin)
             sol  = np.asarray(dd['solution'])
@@ -148,6 +163,36 @@ def read_data(start,stop,prefix,nnodex,nnodey,strtype):
             soly = sol[:,1].reshape(nnodex,nnodey).T
             images[iloc,:,:,0] = solx
             images[iloc,:,:,1] = soly
+
+            # copied from strain.py script
+            ux  = images[iloc,:,:,0].T
+            uy  = images[iloc,:,:,1].T
+            
+            exx = np.diff(ux,axis=0)/dx
+            eyy = np.diff(uy,axis=1)/dy
+            
+            ux_y = np.diff(ux,axis=1)/dy
+            uy_x = np.diff(uy,axis=0)/dx
+
+            # zero padding
+            px=np.zeros((1,nnodey),dtype='float64')
+            py=np.zeros((nnodex,1),dtype='float64')
+
+            exx  = np.vstack((exx,px))
+            eyy  = np.hstack((eyy,py))
+            ux_y = np.hstack((ux_y,py))
+            uy_x = np.vstack((uy_x,px))
+            exy  = 0.5*(ux_y + uy_x)
+
+            # normalization
+            exx  = exx / np.max(np.abs(exx))
+            eyy  = eyy / np.max(np.abs(eyy))
+            exy  = exy / np.max(np.abs(exy))
+
+            # put into strain array
+            strain[iloc,:,:,0]=exx.T
+            strain[iloc,:,:,1]=eyy.T
+            strain[iloc,:,:,2]=exy.T
 
         # get field
         with open(inputname,'r') as fin:
@@ -159,18 +204,18 @@ def read_data(start,stop,prefix,nnodex,nnodey,strtype):
             field_label[iloc,:,:,1] = mu
             
 
-        plotfield(xx,yy,images[iloc,:,:,0],'ux',outsolx)
-        plotfield(xx,yy,images[iloc,:,:,1],'uy',outsoly)
+        plotfield(xx,yy,images[iloc,:,:,0],'ux',outsolx,outputdir=prefix+str(ii))
+        plotfield(xx,yy,images[iloc,:,:,1],'uy',outsoly,outputdir=prefix+str(ii))
         
-        plotfield(xx,yy,field_label[iloc,:,:,0],'lam',outlam)
-        plotfield(xx,yy,field_label[iloc,:,:,1],'mu',outmu)
+        plotfield(xx,yy,field_label[iloc,:,:,0],'lam',outlam,outputdir=prefix+str(ii))
+        plotfield(xx,yy,field_label[iloc,:,:,1],'mu',outmu,outputdir=prefix+str(ii))
 
     listbin = list(binary_label)
     _h      = listbin.count(0)
     _nh     = listbin.count(1)
     
     print(f'Found {_nh} non-homogeneous and {_h} homogeneous examples out of a total {_nh+_h}')
-    strain = np.load('strain.npy')
+    # strain = np.load('strain.npy')
     ll     = Labels(binary=binary_label,center=center_label,radius=radius_label,value=mu_label,field=field_label)
     out    = CNNData(images=images,strain=strain,labels=ll)
 

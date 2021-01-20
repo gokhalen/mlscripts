@@ -4,11 +4,10 @@ mpl.use('Agg')
 import matplotlib.pyplot as plt
 import numpy as np
 import os
-from .config import outputdir
 
-def plotall_and_save(mltype,iptype,history,outputdir=outputdir):
+def plotall_and_save(mltype,iptype,history,outputdir):
     # plot everything in history
-    # history is returned by model.fit
+    # history is a dictionary which maps keys to lists of numbers
     title_key  = mltype+'_'+iptype
     title_dict = {'binary_images':'for binary classification from displacement data',
                   'center_images':'for prediction of inclusion center location (x,y) from displacement data',
@@ -20,12 +19,10 @@ def plotall_and_save(mltype,iptype,history,outputdir=outputdir):
                   'value_strain':'for prediction of inclusion shear modulus value from strain data',
                   }
 
-    if (not os.path.exists(outputdir)):
-        os.mkdir(outputdir)
          
-    for ikey in history.history.keys():
+    for ikey in history.keys():
         plt.figure(ikey)
-        data   = history.history[ikey]
+        data   = history[ikey]
         epochs = range(1,len(data)+1)
         yscale = 'linear'
         # plot losses on log scale
@@ -40,11 +37,7 @@ def plotall_and_save(mltype,iptype,history,outputdir=outputdir):
         plt.savefig(f'{outputdir}/{title_key}'+'_plot_'+ikey+'.png')
         np.save(arr=data,file=f'{outputdir}/{title_key}'+'_plot_'+ikey)
 
-
-def plotcurves(xdata,ydata,xlabel,ylabel,title,legend=None,fname=None,lw=1,outputdir=outputdir):
-
-    if ( not os.path.exists(outputdir)):
-        os.mkdir(outputdir)
+def plotcurves(xdata,ydata,xlabel,ylabel,title,outputdir,legend=None,fname=None,lw=1):
 
     plt.figure(title)
     for yy in ydata:
@@ -57,10 +50,7 @@ def plotcurves(xdata,ydata,xlabel,ylabel,title,legend=None,fname=None,lw=1,outpu
     if (fname is not None):
         plt.savefig(outputdir+'/'+fname)  
 
-def plotfield(xx,yy,field,title,fname,outputdir=outputdir):
-
-    if ( not os.path.exists(outputdir)):
-        os.mkdir(outputdir)
+def plotfield(xx,yy,field,title,fname,outputdir):
     
     plt.figure(title)
     plt.pcolormesh(xx,yy,field)

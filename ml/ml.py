@@ -1,3 +1,13 @@
+import logging
+import os
+
+
+# Silence tf warnings and deprecation mesages
+# Must be before tf is imported
+# https://stackoverflow.com/questions/35911252/disable-tensorflow-debugging-information/38645250#38645250
+os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'  # FATAL
+logging.getLogger('tensorflow').setLevel(logging.FATAL)
+
 from src.misc      import *
 from src.datastrc  import *
 from src.argparams import *
@@ -16,6 +26,7 @@ if __name__ =='__main__':
     params    = get_params(args.inputfile)             # get the params dictionary
     newparams = update_params(params=params,args=args) # override parameters in params with those in args
 
+    # should be able to put these variables into the local variable dictionary programmatically
     ntrain    = newparams['ntrain']
     nvalid    = newparams['nvalid']
     ntest     = newparams['ntest']
@@ -28,18 +39,27 @@ if __name__ =='__main__':
     length    = newparams['length']
     breadth   = newparams['breadth']
     optimizer = newparams['optimizer']
+    mode      = newparams['mode']
+    outputdir = newparams['outputdir']
+
+    if ( not os.path.exists(outputdir)):
+        os.mkdir(outputdir)
 
     # feature scaling is applied to use prior knowledge about the data
     # e.g. We know the max and min coordinates of the center
     # so we can rescale them to be in (0.0,1.0)
+
     
     train_data,valid_data,test_data = get_data( ntrain=ntrain,
                                                 nvalid=nvalid,
                                                 ntest=ntest,
                                                 nnodex=nnodex,
                                                 nnodey=nnodey,
-                                                prefix=prefix
+                                                prefix=prefix,
+                                                outputdir=outputdir
                                                )
+
+    sys.exit(f'{__file__}:Exiting after get_data in ml.py')
     
 
     tt = (train_data,valid_data,test_data)
@@ -52,8 +72,6 @@ if __name__ =='__main__':
     valmin = 0
     valmax = 1
     valave = 0
-
-    
 
     # vf = forward_scale_value(train_data.labels.value,valmin=valmin,valmax=valmax,valave=valave)
     # vi = inverse_scale_value(vf,valmin=valmin,valmax=valmax,valave=valave)
@@ -80,7 +98,9 @@ if __name__ =='__main__':
                                       nnodex=nnodex,
                                       nnodey=nnodey,
                                       epochs=epochs,
-                                      optimizer=optimizer
+                                      optimizer=optimizer,
+                                      mode=mode,
+                                      outputdir=outputdir
                                      )
 
     cnn.summary()
@@ -101,19 +121,20 @@ if __name__ =='__main__':
                                                valmax=valmax,
                                                valave=valave
                                               )
-    save_prediction(mltype=mltype,
-                    iptype=iptype,
-                    prediction=prediction_inv)
+    save_prediction( mltype=mltype,
+                     iptype=iptype,
+                     prediction=prediction_inv,
+                     outputdir=outputdir
+                    )
 
-
-    
     postproc = post_process_cnn( mltype=mltype,
                                  iptype=iptype,
                                  ntrain=ntrain,
                                  nvalid=nvalid,
                                  ntest=ntest,
                                  prediction=prediction_inv,
-                                 test_data=test_data
+                                 test_data=test_data,
+                                 outputdir=outputdir
                                 )
 
     goodbye()

@@ -3,13 +3,12 @@ import os,numpy as np
 import matplotlib as mpl
 import matplotlib.pyplot as plt
 import sys
+import json
 
 
 from sklearn.metrics import confusion_matrix, accuracy_score
 from .datastrc import *
 from .plotting import plotall_and_save,plotcurves
-from .config   import outputdir
-
 
 # Custom activation function
 # https://stackoverflow.com/questions/43915482/how-do-you-create-a-custom-activation-function-with-keras
@@ -162,27 +161,39 @@ def train_cnn(mltype,iptype,cnn,train_data,valid_data,epochs,callback_list):
 
     return (cnn,history)
 
-def load_or_train_and_plot_cnn(mltype,iptype,train_data,valid_data,nnodex,nnodey,epochs,optimizer):
-    model_dir = mltype+'_'+iptype+'_model'
-    check_dir = mltype+'_'+iptype+'_check_model'
+def load_or_train_and_plot_cnn(mltype,iptype,train_data,valid_data,nnodex,nnodey,epochs,optimizer,mode,outputdir):
+    
+    model_dir    = mltype+'_'+iptype+'_model'
+    check_dir    = mltype+'_'+iptype+'_check_model'
+    history_file = outputdir+'/'+mltype+'_'+iptype+'_model_history.json'
 
     callback_list = get_checkpoint(mltype=mltype,chkdir=check_dir)
     
-    if ( not os.path.exists(outputdir)):
-        os.mkdir(outputdir)
-        
-    # load old model if exists else create new model,train it and save it
-    if (os.path.exists(model_dir)):
-        print('-'*80,f'\n Old model for mltype={mltype} exists...loading old model\n','-'*80,sep='')
-        cnn=tf.keras.models.load_model(model_dir)
-    else:
-        cnn = define_cnn(mltype,iptype,nnodex,nnodey,optimizer)
 
-        #if ( mltype == 'value'):
-        #    cnn = define_cnn_value(mltype,nnodex,nnodey,optimizer)
+
+    # if mode == 'checkpoint' the load checkpointed model
+    # if mode == 'train' check to see if previously saved model exists
+    #        if so, continue training for 'nepochs'
+    #        else,  define a new model from scratch and train it
+    if ( mode == 'checkpoint'):
+        print('-'*80,f'Loading checkpointed model for mltype={mltype} iptype={iptype} ','-'*80,sep='')
+        cnn.tf.keras.models.load_model(check_dir)
+
+    if ( mode == 'train'):
+        old_history = {}
+        if (os.path.exists(model_dir)):
+            print('-'*80,f'\n Old model for mltype={mltype} iptype={iptype} exists...loading old model and retraining \n','-'*80,sep='')
+            cnn = tf.keras.models.load_model(model_dir)
+            # assume history_file exists if model_dir exists and load history dictionary
+            with open(history_file,'r') as fin:
+                old_history = json.load(fin)
+        else:
+            print('-'*80,f'\n Trainging model from scratch for mltype={mltype} iptype={iptype} exists...loading old model\n','-'*80,sep='')
+            cnn = define_cnn(mltype,iptype,nnodex,nnodey,optimizer)
+
 
             
-        cnn,history = train_cnn(mltype=mltype,
+        cnn,new_history = train_cnn(mltype=mltype,
                                 iptype=iptype,
                                 cnn=cnn,
                                 train_data=train_data,
@@ -190,15 +201,29 @@ def load_or_train_and_plot_cnn(mltype,iptype,train_data,valid_data,nnodex,nnodey
                                 epochs=epochs,
                                 callback_list=callback_list
                                 )
-        
-        plotall_and_save(mltype,iptype,history)
-        
-        # https://github.com/tensorflow/tensorflow/issues/44178 - Deprecation
-        # warnings are nothing to worry about
+        if not old_history:
+            # old_history is empty. we are not restarting from a saved model.
+            # create the keys in it which are in history
+            old_history = { key:[] for key in new_history.history.keys()}
+
+        # append the new_history to the old_history
+        history_sum = { key:(old_history[key]+new_history.history[key]) for key in new_history.history.keys()}
+
+
+        # save the history_sum dict
+        with open(history_file,'w') as fout:
+            json.dump(history_sum,fout)
+            
+        plotall_and_save(mltype=mltype,
+                         iptype=iptype,
+                         history=history_sum,
+                         outputdir=outputdir)
+
+        # https://github.com/tensorflow/tensorflow/issues/44178 - Deprecation warnings are nothing to worry about
         tf.keras.models.save_model(model=cnn,filepath=model_dir,overwrite=True,include_optimizer=True)
 
 
-        # plot
+    # plot model
     tf.keras.utils.plot_model(
             cnn, to_file=f'{outputdir}/{mltype}_{iptype}_model.png', show_shapes=True, show_layer_names=True,
             rankdir='TB', expand_nested=False, dpi=256
@@ -224,9 +249,7 @@ def predict_cnn(mltype,iptype,cnn,test_data):
 
     return out
 
-def save_prediction(mltype,iptype,prediction,outputdir=outputdir):
-    if ( not os.path.exists(outputdir)):
-        os.mkdir(outputdir)
+def save_prediction(mltype,iptype,prediction,outputdir):
     np.save(outputdir+'/'+mltype+'_'+iptype+'_prediction',prediction)
 
 
@@ -250,18 +273,16 @@ def percentages(ytrue,ypred,percen,ntest,msg,logfile):
             fout.write(outstr+'\n')
         
 
-def post_process_cnn(mltype,iptype,ntrain,nvalid,ntest,prediction,test_data,outputdir=outputdir):
+def post_process_cnn(mltype,iptype,ntrain,nvalid,ntest,prediction,test_data,outputdir):
     binary_out = None ;    center_out = None;    radius_out = None
     value_out  = None ;    field_out  = None;
 
     logfile = outputdir+'/'+mltype+'_'+iptype+'_logfile.txt'
-    
+
+    # need to delete logfile if exists, because we're appending to it
     if ( os.path.exists(logfile) ):
         os.remove(logfile)
         
-    if ( not os.path.exists(outputdir)):
-        os.mkdir(outputdir)
-       
     percen = [0.05,0.10,0.15,0.2,0.25,0.3,0.35]
     
     if (mltype == 'binary'):
@@ -302,7 +323,7 @@ def post_process_cnn(mltype,iptype,ntrain,nvalid,ntest,prediction,test_data,outp
         fname  = mltype+'_'+iptype+'_plot_x_error'+'.png'
         
         plotcurves(xdata=xdata,ydata=[delta[:,0]],xlabel=xlabel,ylabel=ylabel,
-                   title=title,legend=None,fname=fname)
+                   title=title,outputdir=outputdir,legend=None,fname=fname)
 
         # plot error in y coordinate
         ylabel = 'Error in y coordinate (units)'
@@ -310,7 +331,7 @@ def post_process_cnn(mltype,iptype,ntrain,nvalid,ntest,prediction,test_data,outp
         fname  = mltype+'_'+iptype+'_plot_y_error'+'.png'
 
         plotcurves(xdata=xdata,ydata=[delta[:,1]],xlabel=xlabel,ylabel=ylabel,
-                   title=title,legend=None,fname=fname)
+                   title=title,outputdir=outputdir,legend=None,fname=fname)
 
         print('cnn.py Check for zero denominator later in rel error calculation...')
                
@@ -322,14 +343,14 @@ def post_process_cnn(mltype,iptype,ntrain,nvalid,ntest,prediction,test_data,outp
         fname  = mltype+'_'+iptype+'_plot_x_relerror'+'.png'        
 
         plotcurves(xdata=xdata,ydata=[absrelx],xlabel=xlabel,ylabel=ylabel,
-                   title=title,legend=None,fname=fname)
+                   title=title,outputdir=outputdir,legend=None,fname=fname)
 
         ylabel = 'Absolute Relative Error in y coordinate'
         title  = 'Absolute Relative Error in y coordinate'
         fname  = mltype+'_'+iptype+'_plot_y_relerror'+'.png'        
 
         plotcurves(xdata=xdata,ydata=[absrely],xlabel=xlabel,ylabel=ylabel,
-                   title=title,legend=None,fname=fname)
+                   title=title,outputdir=outputdir,legend=None,fname=fname)
 
         # Calculate number of examples below a specified % rel error for x coord
         percentages(ytrue=test_data.labels.center[:,0],ypred=prediction[:,0],
@@ -352,7 +373,7 @@ def post_process_cnn(mltype,iptype,ntrain,nvalid,ntest,prediction,test_data,outp
         fname  = mltype+'_'+iptype+'_plot_error'+'.png'
 
         plotcurves(xdata=xdata,ydata=[delta],xlabel=xlabel,ylabel=ylabel,
-                title=title,legend=None,fname=fname)
+                   title=title,outputdir=outputdir,legend=None,fname=fname)
 
         absrelerr = np.abs(delta/test_data.labels.radius)
         ylabel    = 'Absolute relative error in radius'
@@ -360,7 +381,7 @@ def post_process_cnn(mltype,iptype,ntrain,nvalid,ntest,prediction,test_data,outp
         fname     = mltype+'_'+iptype+'_plot_abs_rel_error.png'
 
         plotcurves(xdata=xdata,ydata=[abserr],xlabel=xlabel,ylabel=ylabel,
-                   title=title,legend=None,fname=fname)
+                   title=title,outputdir=outputdir,legend=None,fname=fname)
 
         percentages(ytrue=test_data.labels.radius,ypred=prediction,
                     percen=percen,ntest=ntest,msg='Radius rel error: ',
@@ -377,7 +398,7 @@ def post_process_cnn(mltype,iptype,ntrain,nvalid,ntest,prediction,test_data,outp
         fname  = mltype+'_'+iptype+'_plot_error'+'.png'
 
         plotcurves(xdata=xdata,ydata=[delta],xlabel=xlabel,ylabel=ylabel,
-                   title=title,legend=None,fname=fname)
+                   title=title,outputdir=outputdir,legend=None,fname=fname)
 
         xlabel = 'No. of test example'
         ylabel = 'Absolute relative error in shear modulus value (units)'
@@ -385,7 +406,7 @@ def post_process_cnn(mltype,iptype,ntrain,nvalid,ntest,prediction,test_data,outp
         fname  = mltype+'_'+iptype+'_plot_rel_error'+'.png'
 
         plotcurves(xdata=xdata,ydata=[absrelerr],xlabel=xlabel,ylabel=ylabel,
-                   title=title,legend=None,fname=fname)
+                   title=title,outputdir=outputdir,legend=None,fname=fname)
 
         xlabel = 'No. of test example'
         ylabel = 'Shear modulus'
@@ -394,7 +415,7 @@ def post_process_cnn(mltype,iptype,ntrain,nvalid,ntest,prediction,test_data,outp
 
         plotcurves(xdata=xdata,ydata=[prediction,test_data.labels.value],
                    xlabel=xlabel,ylabel=ylabel,
-                   title=title,legend=['prediction','true'],
+                   title=title,outputdir=outputdir,legend=['prediction','true'],
                    fname=fname)
                 
 
