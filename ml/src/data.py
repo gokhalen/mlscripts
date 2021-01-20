@@ -40,6 +40,7 @@ def get_data(ntrain,nvalid,ntest,nnodex,nnodey,prefix,outputdir):
     nsum   = ntrain+nvalid+ntest
 
     bool_files_exist = (os.path.exists('images.npy') and
+                        os.path.exists('strain.npy') and 
                         os.path.exists('binary.npy') and
                         os.path.exists('center.npy') and
                         os.path.exists('radius.npy') and
@@ -50,6 +51,7 @@ def get_data(ntrain,nvalid,ntest,nnodex,nnodey,prefix,outputdir):
     if bool_files_exist :
         print('-'*80,f'\n Loading previously created .npy files directly\n','-'*80,sep='')
         images = np.load('images.npy')
+        strain = np.load('strain.npy')
         binary = np.load('binary.npy')
         center = np.load('center.npy')
         radius = np.load('radius.npy')
@@ -57,6 +59,7 @@ def get_data(ntrain,nvalid,ntest,nnodex,nnodey,prefix,outputdir):
         field  = np.load('field.npy')
 
         assert ( images.shape[0] ==
+                 strain.shape[0] ==
                  binary.shape[0] ==
                  center.shape[0] ==
                  radius.shape[0] ==
@@ -73,7 +76,6 @@ def get_data(ntrain,nvalid,ntest,nnodex,nnodey,prefix,outputdir):
                         field=field
                        )
 
-        strain    = np.load('strain.npy')
         full_data = CNNData(images=images,strain=strain,labels=labels)
     else:
         print('-'*80,f'\nPreviously created files not found, processing data and creating .npy files\n','-'*80,sep='')
