@@ -1,7 +1,6 @@
 import logging
 import os
 
-
 # Silence tf warnings and deprecation mesages
 # Must be before tf is imported
 # https://stackoverflow.com/questions/35911252/disable-tensorflow-debugging-information/38645250#38645250
@@ -59,8 +58,6 @@ if __name__ =='__main__':
                                                 outputdir=outputdir
                                                )
 
-    sys.exit(f'{__file__}:Exiting after get_data in ml.py')
-    
 
     tt = (train_data,valid_data,test_data)
 

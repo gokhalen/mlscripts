@@ -14,7 +14,6 @@ from .plotting import plotall_and_save,plotcurves
 # https://stackoverflow.com/questions/43915482/how-do-you-create-a-custom-activation-function-with-keras
 # https://keras.io/api/layers/activations/
 
-
 def get_checkpoint(mltype,chkdir):
     # https://keras.io/api/callbacks/model_checkpoint/
     if (mltype == 'binary'):
@@ -66,7 +65,7 @@ def define_cnn(mltype,iptype,nnodex,nnodey,optimizer):
     regularizers = {'binary':None,
                     'center':None,
                     'radius':None,
-                    'value':tf.keras.regularizers.l2(0),
+                    'value':tf.keras.regularizers.l2(0.0),
                    }
     
     # Initialising the CNN
@@ -110,41 +109,103 @@ def define_cnn(mltype,iptype,nnodex,nnodey,optimizer):
     return cnn
 
 
-def define_cnn_value(mltype,nnodex,nnodey,optimizer):
-    
-    ndim = 2
+def define_cnn_value(mltype,iptype,nnodex,nnodey,optimizer):
+    if ( iptype == 'images'):
+        nchannel = 2
+    if ( iptype == 'strain'): 
+        nchannel = 3 # number of displacement components.
+
+    # lookup table to define output layer (units and activation)
+    # and loss and other metrics to evaluate
+    # look up table seems to be cleaner than using if statements
+    units      = {'binary':1,
+                  'center':2,
+                  'radius':1,
+                  'value':1
+                  }
+    loss       = {'binary':'binary_crossentropy',
+                  'center':'mse',
+                  'radius':'mse',
+                  'value':'mse'
+                  }
+    activation = {'binary':'sigmoid',
+                  'center':'sigmoid',
+                  'radius':'linear',
+                  'value' :'linear'
+                  }
+    metrics    = {'binary':['accuracy'],
+                  'center':[],
+                  'radius':[],
+                  'value':[]
+                  }
+
+    regularizers = {'binary':None,
+                    'center':None,
+                    'radius':None,
+                    'value':tf.keras.regularizers.l2(0.0),
+                   }
     
     # Initialising the CNN
     cnn    = tf.keras.models.Sequential()
     
     # Step 1 - Convolution
-    # conv2d_layer_1 = tf.keras.layers.Conv2D(
-    # filters=3, kernel_size=16, activation='relu',
-    #                                        input_shape=[nnodey, nnodex, 2],
-    #                                        kernel_regularizer=None
-    #                                        )
-    # cnn.add(conv2d_layer_1)
-    # Step 2 - Pooling
-    # cnn.add(tf.keras.layers.MaxPool2D(pool_size=8, strides=1))
-    # Step 3 - Flattening
+    conv2d_layer_1 = tf.keras.layers.Conv2D(
+                                            filters=3, kernel_size=3, activation='relu',
+                                            input_shape=[nnodey, nnodex, nchannel],
+                                            kernel_regularizer=regularizers[mltype]
+                                            )
 
-    cnn.add(tf.keras.Input(shape=(nnodey,nnodex,2)))
+    cnn.add(conv2d_layer_1)
+    # Step 2 - Pooling
+    cnn.add(tf.keras.layers.MaxPool2D(pool_size=2, strides=2))
+
     
-    
+    '''
+    # Another convolutional layer No. 2
+    conv2d_layer_2 = tf.keras.layers.Conv2D(filters=64, kernel_size=3, activation='relu',
+                                            kernel_regularizer=regularizers[mltype]
+                                            )
+    cnn.add(conv2d_layer_2)
+    cnn.add(tf.keras.layers.MaxPool2D(pool_size=2, strides=2))
+    '''
+
+
+     # Step 3 - Flattening 
     cnn.add(tf.keras.layers.Flatten())
 
-    # dense_layer_1 = tf.keras.Dense(
-        
-    # Step 5 - Output Layer - mltype is a string which comes out of the params dictionary
-    dense_layer_2 = tf.keras.layers.Dense(units=1, activation='linear',
-                                          kernel_regularizer=None,
-                                          kernel_initializer=tf.keras.initializers.RandomNormal(stddev=100.0)
-                                          )
+    '''
+    # Step 4 - Full Connection
+    dense_layer_1 = tf.keras.layers.Dense(units=128, activation='relu',
+                                          kernel_regularizer=regularizers[mltype])
+    cnn.add(dense_layer_1)
+
+
+    dense_layer_2 = tf.keras.layers.Dense(units=128, activation='relu',
+                                          kernel_regularizer=regularizers[mltype])
 
     cnn.add(dense_layer_2)
-    cnn.compile(optimizer = 'rmsprop', loss = 'mse', metrics = [])
+
+
+    dense_layer_3 = tf.keras.layers.Dense(units=128, activation='relu',
+                                          kernel_regularizer=regularizers[mltype])
+
+    cnn.add(dense_layer_3)
+    '''
+    
+    
+    # Step 5 - Output Layer - mltype is a string which comes out of the params dictionary
+    dense_layer_4 = tf.keras.layers.Dense(units=units[mltype], activation=activation[mltype],
+                                          kernel_regularizer=regularizers[mltype])
+    cnn.add(dense_layer_4)
+
+    opt = tf.keras.optimizers.Adam()
+
+    cnn.compile(optimizer = opt, loss = loss[mltype], metrics = metrics[mltype])
     
     return cnn
+
+
+
 
 
 
@@ -169,15 +230,14 @@ def load_or_train_and_plot_cnn(mltype,iptype,train_data,valid_data,nnodex,nnodey
 
     callback_list = get_checkpoint(mltype=mltype,chkdir=check_dir)
     
-
-
     # if mode == 'checkpoint' the load checkpointed model
     # if mode == 'train' check to see if previously saved model exists
     #        if so, continue training for 'nepochs'
     #        else,  define a new model from scratch and train it
     if ( mode == 'checkpoint'):
-        print('-'*80,f'Loading checkpointed model for mltype={mltype} iptype={iptype} ','-'*80,sep='')
-        cnn.tf.keras.models.load_model(check_dir)
+        # we can get rid of this if branch and just return the best model after training
+        print('-'*80,f'\n Loading checkpointed model for mltype={mltype} iptype={iptype}\n','-'*80,sep='')
+        cnn = tf.keras.models.load_model(check_dir)
 
     if ( mode == 'train'):
         old_history = {}
@@ -188,10 +248,11 @@ def load_or_train_and_plot_cnn(mltype,iptype,train_data,valid_data,nnodex,nnodey
             with open(history_file,'r') as fin:
                 old_history = json.load(fin)
         else:
-            print('-'*80,f'\n Trainging model from scratch for mltype={mltype} iptype={iptype} exists...loading old model\n','-'*80,sep='')
+            print('-'*80,f'\n Training model from scratch for mltype={mltype} iptype={iptype} \n','-'*80,sep='')
+            # print('WARNING: using cnn = define_cnn_value: Press any key to continue ')
+            # _ = input()
+                                    
             cnn = define_cnn(mltype,iptype,nnodex,nnodey,optimizer)
-
-
             
         cnn,new_history = train_cnn(mltype=mltype,
                                 iptype=iptype,
@@ -221,6 +282,10 @@ def load_or_train_and_plot_cnn(mltype,iptype,train_data,valid_data,nnodex,nnodey
 
         # https://github.com/tensorflow/tensorflow/issues/44178 - Deprecation warnings are nothing to worry about
         tf.keras.models.save_model(model=cnn,filepath=model_dir,overwrite=True,include_optimizer=True)
+        
+        # finally, load the best model and return it at the end.
+        # during training the best model is available 
+        cnn = tf.keras.models.load_model(check_dir)
 
 
     # plot model
@@ -399,6 +464,7 @@ def post_process_cnn(mltype,iptype,ntrain,nvalid,ntest,prediction,test_data,outp
 
         plotcurves(xdata=xdata,ydata=[delta],xlabel=xlabel,ylabel=ylabel,
                    title=title,outputdir=outputdir,legend=None,fname=fname)
+
 
         xlabel = 'No. of test example'
         ylabel = 'Absolute relative error in shear modulus value (units)'
