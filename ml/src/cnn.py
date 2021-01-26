@@ -4,11 +4,12 @@ import matplotlib as mpl
 import matplotlib.pyplot as plt
 import sys
 import json
+import pickle
 
 
 from sklearn.metrics import confusion_matrix, accuracy_score
 from .datastrc import *
-from .plotting import plotall_and_save,plotcurves
+from .plotting import plotall_and_save,plotcurves,plotfield,subplotfields
 
 # Custom activation function
 # https://stackoverflow.com/questions/43915482/how-do-you-create-a-custom-activation-function-with-keras
@@ -44,28 +45,33 @@ def define_cnn(mltype,iptype,nnodex,nnodey,optimizer):
     units      = {'binary':1,
                   'center':2,
                   'radius':1,
-                  'value':1
+                  'value' :1,
+                  'field' :(nnodex*nnodey)
                   }
     loss       = {'binary':'binary_crossentropy',
                   'center':'mse',
                   'radius':'mse',
-                  'value':'mse'
+                  'value' :'mse',
+                  'field' :'mse'
                   }
     activation = {'binary':'sigmoid',
                   'center':'sigmoid',
                   'radius':'linear',
-                  'value' :'linear'
+                  'value' :'linear',
+                  'field' :'linear'
                   }
     metrics    = {'binary':['accuracy'],
                   'center':[],
                   'radius':[],
-                  'value':[]
+                  'value':[],
+                  'field':[]
                   }
 
     regularizers = {'binary':None,
                     'center':None,
                     'radius':None,
                     'value':tf.keras.regularizers.l2(0.0),
+                    'field':None
                    }
     
     # Initialising the CNN
@@ -91,6 +97,8 @@ def define_cnn(mltype,iptype,nnodex,nnodey,optimizer):
 
     # Step 3 - Flattening 
     cnn.add(tf.keras.layers.Flatten())
+
+
     
     # Step 4 - Full Connection
     dense_layer_1 = tf.keras.layers.Dense(units=128, activation='relu',
@@ -105,7 +113,7 @@ def define_cnn(mltype,iptype,nnodex,nnodey,optimizer):
     opt = tf.keras.optimizers.Adam()
 
     cnn.compile(optimizer = opt, loss = loss[mltype], metrics = metrics[mltype])
-    
+
     return cnn
 
 
@@ -205,28 +213,44 @@ def define_cnn_value(mltype,iptype,nnodex,nnodey,optimizer):
     return cnn
 
 
-
-
-
-
 def train_cnn(mltype,iptype,cnn,train_data,valid_data,epochs,callback_list):
-    # we're using eval and consistent definition of attributes to escape writing lots of if statements
-
     
-    history=cnn.fit( x = eval(f'train_data.{iptype}'),
-                     y = eval(f'train_data.labels.{mltype}'),
-                     validation_data = (eval(f'valid_data.{iptype}'),eval(f'valid_data.labels.{mltype}')),
-                     epochs    = epochs,
-                     callbacks = callback_list
-                    )
+    # we're using eval and consistent definition of attributes to escape writing lots of if statements
+    # we need to reshape the field data differently from other data
+    if ( mltype != 'field'):
+        history=cnn.fit( x = eval(f'train_data.{iptype}'),
+                         y = eval(f'train_data.labels.{mltype}'),
+                         validation_data = (eval(f'valid_data.{iptype}'),eval(f'valid_data.labels.{mltype}')),
+                         epochs    = epochs,
+                         callbacks = callback_list
+                       )
 
+    if ( mltype == 'field'):
+        # for training we require a 2D array
+        ntrain = train_data.labels.field.shape[0]
+        nvalid = valid_data.labels.field.shape[0]
+        
+        ytrain = train_data.labels.field[:,:,:,1]
+        ytrain = ytrain.reshape((ntrain,-1))
+        
+        yvalid = valid_data.labels.field[:,:,:,1]
+        yvalid = yvalid.reshape((nvalid,-1))
+
+        history=cnn.fit( x = eval(f'train_data.{iptype}'),
+                         y = ytrain,
+                         validation_data = (eval(f'valid_data.{iptype}'),yvalid),
+                         epochs    = epochs,
+                         callbacks = callback_list
+                       )
+        
     return (cnn,history)
 
 def load_or_train_and_plot_cnn(mltype,iptype,train_data,valid_data,nnodex,nnodey,epochs,optimizer,mode,outputdir):
     
-    model_dir    = mltype+'_'+iptype+'_model'
-    check_dir    = mltype+'_'+iptype+'_check_model'
-    history_file = outputdir+'/'+mltype+'_'+iptype+'_model_history.json'
+    model_dir     = mltype+'_'+iptype+'_model'
+    check_dir     = mltype+'_'+iptype+'_check_model'
+    history_file  = outputdir+'/'+mltype+'_'+iptype+'_model_history.json'
+    best_callback_file = outputdir+'/'+mltype+'_'+iptype+'_best_callback.json' 
 
     callback_list = get_checkpoint(mltype=mltype,chkdir=check_dir)
     
@@ -247,13 +271,22 @@ def load_or_train_and_plot_cnn(mltype,iptype,train_data,valid_data,nnodex,nnodey
             # assume history_file exists if model_dir exists and load history dictionary
             with open(history_file,'r') as fin:
                 old_history = json.load(fin)
+
+            # https://stackoverflow.com/questions/59255206/tf-keras-how-to-save-modelcheckpoint-object
+            # KawingKelvin's answer
+            # get best callback monitored value
+            with open(best_callback_file,'r') as fin:
+                dd = json.load(fin)
+
+            callback_list[0].best = dd['best']
+                
         else:
             print('-'*80,f'\n Training model from scratch for mltype={mltype} iptype={iptype} \n','-'*80,sep='')
             # print('WARNING: using cnn = define_cnn_value: Press any key to continue ')
             # _ = input()
                                     
             cnn = define_cnn(mltype,iptype,nnodex,nnodey,optimizer)
-            
+
         cnn,new_history = train_cnn(mltype=mltype,
                                 iptype=iptype,
                                 cnn=cnn,
@@ -262,6 +295,10 @@ def load_or_train_and_plot_cnn(mltype,iptype,train_data,valid_data,nnodex,nnodey
                                 epochs=epochs,
                                 callback_list=callback_list
                                 )
+        
+
+        print(f'{__file__}: Done training')
+        
         if not old_history:
             # old_history is empty. we are not restarting from a saved model.
             # create the keys in it which are in history
@@ -274,14 +311,23 @@ def load_or_train_and_plot_cnn(mltype,iptype,train_data,valid_data,nnodex,nnodey
         # save the history_sum dict
         with open(history_file,'w') as fout:
             json.dump(history_sum,fout)
-            
+
+
+        print(f'{__file__}: before plotall_and_save')
+        
         plotall_and_save(mltype=mltype,
                          iptype=iptype,
                          history=history_sum,
                          outputdir=outputdir)
 
+        
+        print(f'{__file__}: saving model')
         # https://github.com/tensorflow/tensorflow/issues/44178 - Deprecation warnings are nothing to worry about
         tf.keras.models.save_model(model=cnn,filepath=model_dir,overwrite=True,include_optimizer=True)
+
+        with open(best_callback_file,'w') as fout:
+            dd = {'best':callback_list[0].best}
+            json.dump(dd,fout) 
         
         # finally, load the best model and return it at the end.
         # during training the best model is available 
@@ -297,7 +343,7 @@ def load_or_train_and_plot_cnn(mltype,iptype,train_data,valid_data,nnodex,nnodey
     return cnn
 
 
-def predict_cnn(mltype,iptype,cnn,test_data):
+def predict_cnn(mltype,iptype,cnn,test_data,nnodex,nnodey):
     out = cnn.predict(eval(f'test_data.{iptype}'))
     if ( mltype == 'binary'):
         out = out > 0.5
@@ -311,6 +357,9 @@ def predict_cnn(mltype,iptype,cnn,test_data):
 
     if ( mltype == 'value'):
         out = out.reshape((-1,))
+
+    if ( mltype == 'field'):
+        out = out.reshape((-1,nnodey,nnodex))
 
     return out
 
@@ -338,7 +387,7 @@ def percentages(ytrue,ypred,percen,ntest,msg,logfile):
             fout.write(outstr+'\n')
         
 
-def post_process_cnn(mltype,iptype,ntrain,nvalid,ntest,prediction,test_data,outputdir):
+def post_process_cnn(mltype,iptype,ntrain,nvalid,ntest,prediction,test_data,outputdir,nnodex,nnodey):
     binary_out = None ;    center_out = None;    radius_out = None
     value_out  = None ;    field_out  = None;
 
@@ -417,6 +466,23 @@ def post_process_cnn(mltype,iptype,ntrain,nvalid,ntest,prediction,test_data,outp
         plotcurves(xdata=xdata,ydata=[absrely],xlabel=xlabel,ylabel=ylabel,
                    title=title,outputdir=outputdir,legend=None,fname=fname)
 
+        ylabel = 'x-coordinate (units)'
+        title  = 'True and predicted x-coordinate (units)'
+        fname  = mltype+'_'+iptype+'_plot_x_comparison'+'.png'
+
+        plotcurves(xdata=xdata,ydata=[test_data.labels.center[:,0],prediction[:,0]],
+                   xlabel=xlabel,ylabel=ylabel,
+                   title=title,outputdir=outputdir,legend=['true','predicted'],fname=fname)
+
+        
+        ylabel = 'y-coordinate (units)'
+        title  = 'True and predicted y-coordinate (units)'
+        fname  = mltype+'_'+iptype+'_plot_y_comparison'+'.png'
+
+        plotcurves(xdata=xdata,ydata=[test_data.labels.center[:,1],prediction[:,1]],
+                   xlabel=xlabel,ylabel=ylabel,
+                   title=title,outputdir=outputdir,legend=['true','predicted'],fname=fname)
+
         # Calculate number of examples below a specified % rel error for x coord
         percentages(ytrue=test_data.labels.center[:,0],ypred=prediction[:,0],
                     percen=percen,ntest=ntest,msg='X-coordinate rel error: ',
@@ -447,6 +513,15 @@ def post_process_cnn(mltype,iptype,ntrain,nvalid,ntest,prediction,test_data,outp
 
         plotcurves(xdata=xdata,ydata=[abserr],xlabel=xlabel,ylabel=ylabel,
                    title=title,outputdir=outputdir,legend=None,fname=fname)
+
+        ylabel    = 'Radius (units)'
+        title     = 'Comparison of true and predicted radii (units)'
+        fname     = mltype+'_'+iptype+'_plot_comparison.png'
+
+        plotcurves(xdata=xdata,ydata=[test_data.labels.radius,prediction],
+                   xlabel=xlabel,ylabel=ylabel,
+                   title=title,outputdir=outputdir,legend=['true','prediction'],fname=fname)
+        
 
         percentages(ytrue=test_data.labels.radius,ypred=prediction,
                     percen=percen,ntest=ntest,msg='Radius rel error: ',
@@ -491,8 +566,29 @@ def post_process_cnn(mltype,iptype,ntrain,nvalid,ntest,prediction,test_data,outp
         
 
     if (mltype =='field'):
-        pass
+        nn        = np.linalg.norm(test_data.labels.field[:,:,:,1] - prediction)
+        inputname = 'input0.json.in'
+        with open(inputname,'r') as fin:
+            dd    = json.load(fin)
+            coord = np.asarray(dd['coord'])
+            xx    = coord[:,0].reshape(nnodex,nnodey).T
+            yy    = coord[:,1].reshape(nnodex,nnodey).T
 
+            
+        print(f'norm of diff between predicted and correct fields {nn}')
+        nimg = test_data.labels.field.shape[0]
+        for ifield in range(nimg):
+            print(f'plotting test example {ifield+1} out of {nimg}')
+            mucorr = test_data.labels.field[ifield,:,:,1]
+            mupred = prediction[ifield,:,:]
+            # plotfield(xx,yy,field,title,fname,outputdir):
+            # plotfield(xx,yy,mucorr,'mu corr'+str(ifield),'mucorr'+str(ifield),outputdir=outputdir)
+            # plotfield(xx,yy,mupred,'mu pred'+str(ifield),'mupred'+str(ifield),outputdir=outputdir) 
+            subplotfields(xx,yy,[mucorr,mupred],['mu correct','mu pred'],'mucomp'+str(ifield),outputdir=outputdir)            
+            
+    # this isn't really necessary, we're not doing anything with the
+    # output of this post_process_cnn
+    # only binary_out is not None
     out = PostData(binary=binary_out,
                    center=center_out,
                    radius=radius_out,

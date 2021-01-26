@@ -11,10 +11,6 @@ from .config   import mltypelist
 from sklearn.preprocessing import StandardScaler
 
 
-def make_strain(dispfile,prefix,nnodex,nnodey):
-    pass
-
-
 def split_cnndata(cnndata,start,stop):
     assert(stop > start),'stop should be > start in split_cnndata'
     labels = Labels(binary = cnndata.labels.binary[start:stop,...],
@@ -187,9 +183,9 @@ def read_data(start,stop,prefix,nnodex,nnodey,strtype,outputdir):
             exy  = 0.5*(ux_y + uy_x)
 
             # normalization
-            exx  = exx / np.max(np.abs(exx))
-            eyy  = eyy / np.max(np.abs(eyy))
-            exy  = exy / np.max(np.abs(exy))
+            # exx  = exx / np.max(np.abs(exx))
+            # eyy  = eyy / np.max(np.abs(eyy))
+            # exy  = exy / np.max(np.abs(exy))
 
             # put into strain array
             strain[iloc,:,:,0]=exx.T
@@ -315,4 +311,7 @@ def inverse_scale_prediction(mltype,prediction,length,breadth,valmin,valmax,vala
 
     if (mltype == 'value'):
         return inverse_scale_value(prediction,valmin=valmin,valmax=valmax,valave=valave)
+
+    if (mltype == 'field'):
+        return prediction
 

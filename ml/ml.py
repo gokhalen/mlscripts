@@ -101,13 +101,15 @@ if __name__ =='__main__':
                                      )
 
     cnn.summary()
+
     
     prediction = predict_cnn( mltype=mltype,
                               iptype=iptype,
                               cnn=cnn,
-                              test_data=test_data_scaled
+                              test_data=test_data_scaled,
+                              nnodex=nnodex,
+                              nnodey=nnodey
                              )
-
 
     
     prediction_inv = inverse_scale_prediction( mltype=mltype,
@@ -118,11 +120,14 @@ if __name__ =='__main__':
                                                valmax=valmax,
                                                valave=valave
                                               )
+        
     save_prediction( mltype=mltype,
                      iptype=iptype,
                      prediction=prediction_inv,
                      outputdir=outputdir
                     )
+
+    # sys.exit(f'{__file__}: Exiting after save_prediction')
 
     postproc = post_process_cnn( mltype=mltype,
                                  iptype=iptype,
@@ -131,8 +136,10 @@ if __name__ =='__main__':
                                  ntest=ntest,
                                  prediction=prediction_inv,
                                  test_data=test_data,
-                                 outputdir=outputdir
-                                )
+                                 outputdir=outputdir,
+                                 nnodex=nnodex,
+                                 nnodey=nnodey
+                               )
 
     goodbye()
 

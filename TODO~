@@ -1,12 +1,10 @@
--5000) Saving best weights
+1) Incompressible model, only one component of displacement field, noise in disp
 
--101) Check if strain images can predict stiffness (np.diff)
+
+
+
 -100) Post Process all data sets (ntrain,ntest,nvalid)
 -99)  Regularization for layers
-
-
--40) Modify mlsetup to deal with strains
-
 
 -11) Validation loss is actually increasing with iterations for value prediction
 -9) Use the sigmoid function to restrict range of values of mu between mumin and mumax
