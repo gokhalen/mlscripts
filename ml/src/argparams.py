@@ -14,8 +14,17 @@ def get_args():
     
     parser.add_argument('--mltype',help='type of ml to do',required=True,
                         choices=mltypelist)
+    
+    # images  - used both components of displacement
+    # imagesx - uses  x component only
+    # imagesy - uses  y component only
+    # strain  - uses  all three components of strain
+    # strainxx - uses e_xx only
+    # strainyy - uses e_yy only
+    # strainxxyy - uses e_xx and e_yy
+    
     parser.add_argument('--iptype',help='input data to use',required=True,
-                        choices=['images','strain']
+                        choices=['images','imagesx','imagesy','strain','strainxx','strainyy','strainxxyy']
                         )
     
     parser.add_argument('--ntrain',help='number of training examples to generate',
@@ -41,6 +50,11 @@ def get_args():
     parser.add_argument('--mode',help='predict with checkpointed model or continue training saved model',
                         required=True,type=str,
                         choices=['checkpoint','train']
+                        )
+
+    parser.add_argument('--nimg',help='number of images to post process',
+                        required=False,type=int,
+                        default=32
                         )
 
     
@@ -77,5 +91,6 @@ def update_params(params,args):
     newparams['outputdir'] = args.mltype+'_'+args.iptype
     newparams['mode']      = args.mode
     newparams['outputdir'] = args.outputdir
+    newparams['nimg']      = args.nimg
         
     return newparams

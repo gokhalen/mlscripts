@@ -40,6 +40,7 @@ if __name__ =='__main__':
     optimizer = newparams['optimizer']
     mode      = newparams['mode']
     outputdir = newparams['outputdir']
+    nimg      = newparams['nimg']
 
     if ( not os.path.exists(outputdir)):
         os.mkdir(outputdir)
@@ -47,7 +48,6 @@ if __name__ =='__main__':
     # feature scaling is applied to use prior knowledge about the data
     # e.g. We know the max and min coordinates of the center
     # so we can rescale them to be in (0.0,1.0)
-
     
     train_data,valid_data,test_data = get_data( ntrain=ntrain,
                                                 nvalid=nvalid,
@@ -138,7 +138,8 @@ if __name__ =='__main__':
                                  test_data=test_data,
                                  outputdir=outputdir,
                                  nnodex=nnodex,
-                                 nnodey=nnodey
+                                 nnodey=nnodey,
+                                 nimg=nimg
                                )
 
     goodbye()

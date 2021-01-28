@@ -11,6 +11,20 @@ from .config   import mltypelist
 from sklearn.preprocessing import StandardScaler
 
 
+def select_input_comps(data,iptype):
+    # data is an namedtuple of type cnndata
+    data_dict = {'images':data.images,
+                  'imagesx':data.images[...,0:1],
+                  'imagesy':data.images[...,1:2],
+                  'strain':data.strain,
+                  'strainxx':data.strain[...,0:1],
+                  'strainyy':data.strain[...,1:2],
+                  'strainxxyy':data.strain[...,0:2]
+                 }
+    
+    return data_dict[iptype]
+
+
 def split_cnndata(cnndata,start,stop):
     assert(stop > start),'stop should be > start in split_cnndata'
     labels = Labels(binary = cnndata.labels.binary[start:stop,...],
@@ -30,6 +44,10 @@ def get_data(ntrain,nvalid,ntest,nnodex,nnodey,prefix,outputdir):
     # ntrain,nvalid,ntest are integers and should sum up to less than the number of files
     # returned by glob
     # train_data is a namedtuple with four components image,label,center,value,radius
+
+    # reads the complete data, both displacements, all three strains
+    # if we need fewer components, for training, CNN definition and prediction it is handled in
+    # define_cnn,train_cnn,predict_cnn
     
     train_data,valid_data,test_data = None,None,None
 

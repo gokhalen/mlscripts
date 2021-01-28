@@ -10,6 +10,7 @@ import pickle
 from sklearn.metrics import confusion_matrix, accuracy_score
 from .datastrc import *
 from .plotting import plotall_and_save,plotcurves,plotfield,subplotfields
+from .data import select_input_comps
 
 # Custom activation function
 # https://stackoverflow.com/questions/43915482/how-do-you-create-a-custom-activation-function-with-keras
@@ -34,10 +35,17 @@ def get_checkpoint(mltype,chkdir):
     
 
 def define_cnn(mltype,iptype,nnodex,nnodey,optimizer):
-    if ( iptype == 'images'):
-        nchannel = 2
-    if ( iptype == 'strain'): 
-        nchannel = 3 # number of displacement components.
+    # channels is the number of components of input fields
+    # if we have 2 components of displacements then nchannel =2
+
+    channel_dict = {'images':2,
+                    'imagesx':1,
+                    'imagesy':1,
+                    'strain':3,
+                    'strainxx':1,
+                    'strainyy':1,
+                    'strainxxyy':2
+    }
 
     # lookup table to define output layer (units and activation)
     # and loss and other metrics to evaluate
@@ -80,7 +88,7 @@ def define_cnn(mltype,iptype,nnodex,nnodey,optimizer):
     # Step 1 - Convolution
     conv2d_layer_1 = tf.keras.layers.Conv2D(
                                             filters=32, kernel_size=3, activation='relu',
-                                            input_shape=[nnodey, nnodex, nchannel],
+                                            input_shape=[nnodey, nnodex, channel_dict[iptype]],
                                             kernel_regularizer=regularizers[mltype]
                                             )
 
@@ -117,106 +125,12 @@ def define_cnn(mltype,iptype,nnodex,nnodey,optimizer):
     return cnn
 
 
-def define_cnn_value(mltype,iptype,nnodex,nnodey,optimizer):
-    if ( iptype == 'images'):
-        nchannel = 2
-    if ( iptype == 'strain'): 
-        nchannel = 3 # number of displacement components.
-
-    # lookup table to define output layer (units and activation)
-    # and loss and other metrics to evaluate
-    # look up table seems to be cleaner than using if statements
-    units      = {'binary':1,
-                  'center':2,
-                  'radius':1,
-                  'value':1
-                  }
-    loss       = {'binary':'binary_crossentropy',
-                  'center':'mse',
-                  'radius':'mse',
-                  'value':'mse'
-                  }
-    activation = {'binary':'sigmoid',
-                  'center':'sigmoid',
-                  'radius':'linear',
-                  'value' :'linear'
-                  }
-    metrics    = {'binary':['accuracy'],
-                  'center':[],
-                  'radius':[],
-                  'value':[]
-                  }
-
-    regularizers = {'binary':None,
-                    'center':None,
-                    'radius':None,
-                    'value':tf.keras.regularizers.l2(0.0),
-                   }
-    
-    # Initialising the CNN
-    cnn    = tf.keras.models.Sequential()
-    
-    # Step 1 - Convolution
-    conv2d_layer_1 = tf.keras.layers.Conv2D(
-                                            filters=3, kernel_size=3, activation='relu',
-                                            input_shape=[nnodey, nnodex, nchannel],
-                                            kernel_regularizer=regularizers[mltype]
-                                            )
-
-    cnn.add(conv2d_layer_1)
-    # Step 2 - Pooling
-    cnn.add(tf.keras.layers.MaxPool2D(pool_size=2, strides=2))
-
-    
-    '''
-    # Another convolutional layer No. 2
-    conv2d_layer_2 = tf.keras.layers.Conv2D(filters=64, kernel_size=3, activation='relu',
-                                            kernel_regularizer=regularizers[mltype]
-                                            )
-    cnn.add(conv2d_layer_2)
-    cnn.add(tf.keras.layers.MaxPool2D(pool_size=2, strides=2))
-    '''
-
-
-     # Step 3 - Flattening 
-    cnn.add(tf.keras.layers.Flatten())
-
-    '''
-    # Step 4 - Full Connection
-    dense_layer_1 = tf.keras.layers.Dense(units=128, activation='relu',
-                                          kernel_regularizer=regularizers[mltype])
-    cnn.add(dense_layer_1)
-
-
-    dense_layer_2 = tf.keras.layers.Dense(units=128, activation='relu',
-                                          kernel_regularizer=regularizers[mltype])
-
-    cnn.add(dense_layer_2)
-
-
-    dense_layer_3 = tf.keras.layers.Dense(units=128, activation='relu',
-                                          kernel_regularizer=regularizers[mltype])
-
-    cnn.add(dense_layer_3)
-    '''
-    
-    
-    # Step 5 - Output Layer - mltype is a string which comes out of the params dictionary
-    dense_layer_4 = tf.keras.layers.Dense(units=units[mltype], activation=activation[mltype],
-                                          kernel_regularizer=regularizers[mltype])
-    cnn.add(dense_layer_4)
-
-    opt = tf.keras.optimizers.Adam()
-
-    cnn.compile(optimizer = opt, loss = loss[mltype], metrics = metrics[mltype])
-    
-    return cnn
-
 
 def train_cnn(mltype,iptype,cnn,train_data,valid_data,epochs,callback_list):
     
     # we're using eval and consistent definition of attributes to escape writing lots of if statements
     # we need to reshape the field data differently from other data
+    
     if ( mltype != 'field'):
         history=cnn.fit( x = eval(f'train_data.{iptype}'),
                          y = eval(f'train_data.labels.{mltype}'),
@@ -387,7 +301,7 @@ def percentages(ytrue,ypred,percen,ntest,msg,logfile):
             fout.write(outstr+'\n')
         
 
-def post_process_cnn(mltype,iptype,ntrain,nvalid,ntest,prediction,test_data,outputdir,nnodex,nnodey):
+def post_process_cnn(mltype,iptype,ntrain,nvalid,ntest,prediction,test_data,outputdir,nnodex,nnodey,nimg):
     binary_out = None ;    center_out = None;    radius_out = None
     value_out  = None ;    field_out  = None;
 
@@ -576,7 +490,7 @@ def post_process_cnn(mltype,iptype,ntrain,nvalid,ntest,prediction,test_data,outp
 
             
         print(f'norm of diff between predicted and correct fields {nn}')
-        nimg = test_data.labels.field.shape[0]
+        # nimg = test_data.labels.field.shape[0]
         for ifield in range(nimg):
             print(f'plotting test example {ifield+1} out of {nimg}')
             mucorr = test_data.labels.field[ifield,:,:,1]
@@ -596,3 +510,102 @@ def post_process_cnn(mltype,iptype,ntrain,nvalid,ntest,prediction,test_data,outp
                    field=field_out
                    )
     return out
+
+
+def define_cnn_value(mltype,iptype,nnodex,nnodey,optimizer):
+    # this function is not used anymore
+    if ( iptype == 'images'):
+        nchannel = 2
+    if ( iptype == 'strain'): 
+        nchannel = 3 # number of displacement components.
+
+    # lookup table to define output layer (units and activation)
+    # and loss and other metrics to evaluate
+    # look up table seems to be cleaner than using if statements
+    units      = {'binary':1,
+                  'center':2,
+                  'radius':1,
+                  'value':1
+                  }
+    loss       = {'binary':'binary_crossentropy',
+                  'center':'mse',
+                  'radius':'mse',
+                  'value':'mse'
+                  }
+    activation = {'binary':'sigmoid',
+                  'center':'sigmoid',
+                  'radius':'linear',
+                  'value' :'linear'
+                  }
+    metrics    = {'binary':['accuracy'],
+                  'center':[],
+                  'radius':[],
+                  'value':[]
+                  }
+
+    regularizers = {'binary':None,
+                    'center':None,
+                    'radius':None,
+                    'value':tf.keras.regularizers.l2(0.0),
+                   }
+    
+    # Initialising the CNN
+    cnn    = tf.keras.models.Sequential()
+    
+    # Step 1 - Convolution
+    conv2d_layer_1 = tf.keras.layers.Conv2D(
+                                            filters=3, kernel_size=3, activation='relu',
+                                            input_shape=[nnodey, nnodex, nchannel],
+                                            kernel_regularizer=regularizers[mltype]
+                                            )
+
+    cnn.add(conv2d_layer_1)
+    # Step 2 - Pooling
+    cnn.add(tf.keras.layers.MaxPool2D(pool_size=2, strides=2))
+
+    
+    '''
+    # Another convolutional layer No. 2
+    conv2d_layer_2 = tf.keras.layers.Conv2D(filters=64, kernel_size=3, activation='relu',
+                                            kernel_regularizer=regularizers[mltype]
+                                            )
+    cnn.add(conv2d_layer_2)
+    cnn.add(tf.keras.layers.MaxPool2D(pool_size=2, strides=2))
+    '''
+
+
+     # Step 3 - Flattening 
+    cnn.add(tf.keras.layers.Flatten())
+
+    '''
+    # Step 4 - Full Connection
+    dense_layer_1 = tf.keras.layers.Dense(units=128, activation='relu',
+                                          kernel_regularizer=regularizers[mltype])
+    cnn.add(dense_layer_1)
+
+
+    dense_layer_2 = tf.keras.layers.Dense(units=128, activation='relu',
+                                          kernel_regularizer=regularizers[mltype])
+
+    cnn.add(dense_layer_2)
+
+
+    dense_layer_3 = tf.keras.layers.Dense(units=128, activation='relu',
+                                          kernel_regularizer=regularizers[mltype])
+
+    cnn.add(dense_layer_3)
+    '''
+    
+    
+    # Step 5 - Output Layer - mltype is a string which comes out of the params dictionary
+    dense_layer_4 = tf.keras.layers.Dense(units=units[mltype], activation=activation[mltype],
+                                          kernel_regularizer=regularizers[mltype])
+    cnn.add(dense_layer_4)
+
+    opt = tf.keras.optimizers.Adam()
+
+    cnn.compile(optimizer = opt, loss = loss[mltype], metrics = metrics[mltype])
+    
+    return cnn
+
+
