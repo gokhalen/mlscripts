@@ -130,11 +130,21 @@ def train_cnn(mltype,iptype,cnn,train_data,valid_data,epochs,callback_list):
     
     # we're using eval and consistent definition of attributes to escape writing lots of if statements
     # we need to reshape the field data differently from other data
+
+    # depending on the iptype we are choosing the data to be 'images' or 'strain'
+    data_dict = {'images':'images',
+                 'imagesx':'images',
+                 'imagesy':'images',
+                 'strain':'strain',
+                 'strainxx':'strain',
+                 'strainyy':'strain',
+                 'strainxxyy':'strain'
+                }
     
     if ( mltype != 'field'):
-        history=cnn.fit( x = eval(f'train_data.{iptype}'),
+        history=cnn.fit( x = eval(f'train_data.{data_dict[iptype]}'),
                          y = eval(f'train_data.labels.{mltype}'),
-                         validation_data = (eval(f'valid_data.{iptype}'),eval(f'valid_data.labels.{mltype}')),
+                         validation_data = (eval(f'valid_data.{data_dict[iptype]}'),eval(f'valid_data.labels.{mltype}')),
                          epochs    = epochs,
                          callbacks = callback_list
                        )
@@ -150,9 +160,9 @@ def train_cnn(mltype,iptype,cnn,train_data,valid_data,epochs,callback_list):
         yvalid = valid_data.labels.field[:,:,:,1]
         yvalid = yvalid.reshape((nvalid,-1))
 
-        history=cnn.fit( x = eval(f'train_data.{iptype}'),
+        history=cnn.fit( x = eval(f'train_data.{data_dict[iptype]}'),
                          y = ytrain,
-                         validation_data = (eval(f'valid_data.{iptype}'),yvalid),
+                         validation_data = (eval(f'valid_data.{data_dict[iptype]}'),yvalid),
                          epochs    = epochs,
                          callbacks = callback_list
                        )
@@ -161,9 +171,9 @@ def train_cnn(mltype,iptype,cnn,train_data,valid_data,epochs,callback_list):
 
 def load_or_train_and_plot_cnn(mltype,iptype,train_data,valid_data,nnodex,nnodey,epochs,optimizer,mode,outputdir):
     
-    model_dir     = mltype+'_'+iptype+'_model'
-    check_dir     = mltype+'_'+iptype+'_check_model'
-    history_file  = outputdir+'/'+mltype+'_'+iptype+'_model_history.json'
+    model_dir          = outputdir+'/' + mltype+'_'+iptype+'_model'
+    check_dir          = outputdir+'/' + mltype+'_'+iptype+'_check_model'
+    history_file       = outputdir+'/' + mltype+'_'+iptype+'_model_history.json'
     best_callback_file = outputdir+'/'+mltype+'_'+iptype+'_best_callback.json' 
 
     callback_list = get_checkpoint(mltype=mltype,chkdir=check_dir)
@@ -258,7 +268,17 @@ def load_or_train_and_plot_cnn(mltype,iptype,train_data,valid_data,nnodex,nnodey
 
 
 def predict_cnn(mltype,iptype,cnn,test_data,nnodex,nnodey):
-    out = cnn.predict(eval(f'test_data.{iptype}'))
+    # depending on the iptype we are choosing the data to be 'images' or 'strain'
+    data_dict = {'images':'images',
+                 'imagesx':'images',
+                 'imagesy':'images',
+                 'strain':'strain',
+                 'strainxx':'strain',
+                 'strainyy':'strain',
+                 'strainxxyy':'strain'
+                }
+
+    out = cnn.predict(eval(f'test_data.{data_dict[iptype]}'))
     if ( mltype == 'binary'):
         out = out > 0.5
         out = out.reshape((-1,))

@@ -55,7 +55,8 @@ if __name__ =='__main__':
                                                 nnodex=nnodex,
                                                 nnodey=nnodey,
                                                 prefix=prefix,
-                                                outputdir=outputdir
+                                                outputdir=outputdir,
+                                                iptype=iptype
                                                )
 
 

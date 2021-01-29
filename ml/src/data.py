@@ -12,17 +12,34 @@ from sklearn.preprocessing import StandardScaler
 
 
 def select_input_comps(data,iptype):
-    # data is an namedtuple of type cnndata
-    data_dict = {'images':data.images,
+    # data - namedtuple of type cnndata
+    # depending on iptype we modify data.images and data.strain
+    # there is a case for using default dict here
+    # the default returned object would be data.images and data.strain
+    
+    images_dict = {'images':data.images,
                   'imagesx':data.images[...,0:1],
                   'imagesy':data.images[...,1:2],
+                  'strain':data.images,
+                  'strainxx':data.images,
+                  'strainyy':data.images,
+                  'strainxxyy':data.images
+                 }
+
+    strain_dict = {'images':data.images,
+                  'imagesx':data.images,
+                  'imagesy':data.images,
                   'strain':data.strain,
                   'strainxx':data.strain[...,0:1],
                   'strainyy':data.strain[...,1:2],
                   'strainxxyy':data.strain[...,0:2]
                  }
+
     
-    return data_dict[iptype]
+    return CNNData(images=images_dict[iptype],
+                   strain=strain_dict[iptype],
+                   labels=data.labels
+                   )
 
 
 def split_cnndata(cnndata,start,stop):
@@ -38,7 +55,7 @@ def split_cnndata(cnndata,start,stop):
                      labels=labels)
     return out
 
-def get_data(ntrain,nvalid,ntest,nnodex,nnodey,prefix,outputdir):
+def get_data(ntrain,nvalid,ntest,nnodex,nnodey,prefix,outputdir,iptype):
     # reads training,validation and test data and returns it
     # prefix is the prefix of the directories which contain training validation and test data
     # ntrain,nvalid,ntest are integers and should sum up to less than the number of files
@@ -107,6 +124,8 @@ def get_data(ntrain,nvalid,ntest,nnodex,nnodey,prefix,outputdir):
         np.save('value', full_data.labels.value)
         np.save('field', full_data.labels.field)
 
+
+    full_data  = select_input_comps(data=full_data,iptype=iptype)
         
     train_data = split_cnndata(full_data,0,ntrain)
     valid_data = split_cnndata(full_data,ntrain,ntrain+nvalid)

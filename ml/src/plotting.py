@@ -8,18 +8,7 @@ import os
 def plotall_and_save(mltype,iptype,history,outputdir):
     # plot everything in history
     # history is a dictionary which maps keys to lists of numbers
-    title_key  = mltype+'_'+iptype
-    title_dict = {'binary_images':'for binary classification from displacement data',
-                  'center_images':'for prediction of inclusion center location (x,y) from displacement data',
-                  'radius_images':'for prediction of inclusion radius from displacement data',
-                  'value_images':'for prediction of inclusion shear modulus value from displacement data',
-                  'field_images':'for prediction of shear modulus field from displacement data',
-                  'binary_strain':'for binary classification from strain data',
-                  'center_strain':'for prediction of inclusion center location (x,y) from strain data',
-                  'radius_strain':'for prediction of inclusion radius from strain data',
-                  'value_strain':'for prediction of inclusion shear modulus value from strain data',
-                  'field_strain':'for prediction of shear modulus field from strain data'
-                  }
+    plot_title  = mltype+'_'+iptype
          
     for ikey in history.keys():
         plt.figure(ikey)
@@ -31,13 +20,13 @@ def plotall_and_save(mltype,iptype,history,outputdir):
             yscale = 'log'
         plt.plot(epochs,data)
         plt.yscale(yscale)
-        plt.title(ikey+' '+ title_dict[title_key])
+        plt.title(plot_title)
         plt.xlabel('epochs')
         plt.ylabel(ikey)
         plt.grid(True,which='both')
         plt.tight_layout()
-        plt.savefig(f'{outputdir}/{title_key}'+'_plot_'+ikey+'.png')
-        np.save(arr=data,file=f'{outputdir}/{title_key}'+'_plot_'+ikey)
+        plt.savefig(f'{outputdir}/{plot_title}'+'_plot_'+ikey+'.png')
+        np.save(arr=data,file=f'{outputdir}/{plot_title}'+'_plot_'+ikey)
 
 def plotcurves(xdata,ydata,xlabel,ylabel,title,outputdir,legend=None,fname=None,lw=1):
 

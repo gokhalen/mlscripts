@@ -10,7 +10,7 @@ def get_args():
                         required=False,default='mlargs.json.out',type=str)
 
     parser.add_argument('--outputdir',help='output directory',
-                        required=False,default='output',type=str)    
+                        required=False,type=str)    
     
     parser.add_argument('--mltype',help='type of ml to do',required=True,
                         choices=mltypelist)
@@ -88,9 +88,12 @@ def update_params(params,args):
     newparams['nepochs']   = args.nepochs
     newparams['optimizer'] = args.optimizer
     newparams['iptype']    = args.iptype
-    newparams['outputdir'] = args.mltype+'_'+args.iptype
     newparams['mode']      = args.mode
-    newparams['outputdir'] = args.outputdir
     newparams['nimg']      = args.nimg
+    
+
+    newparams['outputdir'] = args.mltype+'_'+args.iptype+'_output'
+    if ( args.outputdir != None):
+        newparams['outputdir'] = args.outputdir
         
     return newparams
