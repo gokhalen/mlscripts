@@ -1,6 +1,8 @@
 import tensorflow as tf
 import os,numpy as np
 import matplotlib as mpl
+# https://stackoverflow.com/questions/45993879/matplot-lib-fatal-io-error-25-inappropriate-ioctl-for-device-on-x-server-loc See nanounanue's answer
+mpl.use('Agg')
 import matplotlib.pyplot as plt
 import sys
 import json
@@ -297,8 +299,11 @@ def predict_cnn(mltype,iptype,cnn,test_data,nnodex,nnodey):
 
     return out
 
-def save_prediction(mltype,iptype,prediction,outputdir):
+def save_prediction_test_data(mltype,iptype,prediction,test_data,outputdir):
     np.save(outputdir+'/'+mltype+'_'+iptype+'_prediction',prediction)
+    np.save(outputdir+'/'+mltype+'_'+iptype+'_correct',eval(f'test_data.labels.{mltype}'))
+    np.save(outputdir+'/'+mltype+'_'+iptype+'_test_images',test_data.images)
+    np.save(outputdir+'/'+mltype+'_'+iptype+'_test_strain',test_data.strain)
 
 
 def percentages(ytrue,ypred,percen,ntest,msg,logfile):
@@ -508,7 +513,7 @@ def post_process_cnn(mltype,iptype,ntrain,nvalid,ntest,prediction,test_data,outp
             xx    = coord[:,0].reshape(nnodex,nnodey).T
             yy    = coord[:,1].reshape(nnodex,nnodey).T
 
-            
+
         print(f'norm of diff between predicted and correct fields {nn}')
         # nimg = test_data.labels.field.shape[0]
         for ifield in range(nimg):
@@ -530,6 +535,16 @@ def post_process_cnn(mltype,iptype,ntrain,nvalid,ntest,prediction,test_data,outp
                    field=field_out
                    )
     return out
+
+
+
+def cnn_summary(cnn,mltype,iptype,outputdir):
+#   https://stackoverflow.com/questions/41665799/keras-model-summary-object-to-string
+    summary_filename = mltype+'_'+iptype+'_summary.txt'
+    with open(f'{outputdir}/{summary_filename}','w') as fout:
+        cnn.summary(print_fn=lambda x:fout.write(x+'\n'))
+
+    cnn.summary()
 
 
 def define_cnn_value(mltype,iptype,nnodex,nnodey,optimizer):

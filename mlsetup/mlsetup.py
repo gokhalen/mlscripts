@@ -61,7 +61,8 @@ def getargs():
     parser.add_argument('--muback',help='background mu',required=False,type=float,default=1.0)
     parser.add_argument('--mumin',help='lower bound on mu in inclusion',required=False,type=float,default=2.0)
     parser.add_argument('--mumax',help='upper bound on mu in inclusion',required=False,type=float,default=5.0)
-    parser.add_argument('--nu',help="Poisson's ratio",required=False,type=float,default=0.4)
+    parser.add_argument('--nu',help="Poisson's ratio",required=False,type=float,default=0.49)
+    parser.add_argument('--eltype',help="Element type",required=False,type=str,default='linelas2dnumbasri',choices=['linelas2d','linelas2dnumba','linelas2dnumbasri'])
 
     # see below, where we check problemtype, for constraints on ntrain  
     parser.add_argument('--ntrain',help='number of training   examples to generate',required=False,type=int,default=16)
@@ -99,10 +100,19 @@ def getargs():
     #  print('node capture assertion turned off')
     assert ( int(min(nrminx,nrminy)) > 1 ),'Not enough nodes captured in inclusion specified. Increase nelemx,nelemy,rmin,rmax as appropriate'
 
+    # dump the true min and max radii - this info is not needed for fypymesh.create_mesh_2d so we can't put it into args
+    radir = {}
+    truermin = rmin
+    truermax = rmax
+    radir['truermin']=rmin
+    radir['truermax']=rmax
 
+    argsdir = vars(args)
+    argsdir.update(radir)
+    
     # save parameters passed to mlsetup
     with open('mlargs.json.out','w') as fout:
-        json.dump(vars(args),fout,indent=4)
+        json.dump(argsdir,fout,indent=4)
 
     return args
 
@@ -194,6 +204,7 @@ def generate_random(args):
     dd['mu']      = np.random.uniform(args.mumin,args.mumax)
     dd['muback']  = args.muback
     dd['nu']      = args.nu
+    dd['eltype']  = args.eltype
 
     return dd
 

@@ -101,7 +101,7 @@ if __name__ =='__main__':
                                       outputdir=outputdir
                                      )
 
-    cnn.summary()
+    cnn_summary(cnn=cnn,mltype=mltype,iptype=iptype,outputdir=outputdir)
 
     
     prediction = predict_cnn( mltype=mltype,
@@ -122,11 +122,12 @@ if __name__ =='__main__':
                                                valave=valave
                                               )
         
-    save_prediction( mltype=mltype,
-                     iptype=iptype,
-                     prediction=prediction_inv,
-                     outputdir=outputdir
-                    )
+    save_prediction_test_data( mltype=mltype,
+                               iptype=iptype,
+                               prediction=prediction_inv,
+                               test_data=test_data,
+                               outputdir=outputdir
+                              )
 
     # sys.exit(f'{__file__}: Exiting after save_prediction')
 

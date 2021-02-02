@@ -1,4 +1,6 @@
-1) Incompressible model, only one component of displacement field, noise in disp (noise will be hard to handle)
+-200) Save mucorrect and mupred as a numpy file
+
+1) Incompressible model, only one component of displacement field, noise in disp (noise will be hard to handle), multiple displacement fields will help
 
 
 
