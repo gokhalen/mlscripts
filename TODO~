@@ -1,4 +1,4 @@
-
+0) Make trac force smaller in mlsetup in order to ensure someone does not gripe about linear strain assumption not being violated. After reading strain and displacement data, feature scale both.
 1) Incompressible model, only one component of displacement field, noise in disp (noise will be hard to handle), multiple displacement fields will help
 
 

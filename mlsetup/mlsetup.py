@@ -194,6 +194,7 @@ def generate_random(args):
     dd['nelemy']  = args.nelemy
     dd['stftype'] = 'inclusion'
     dd['bctype']  = 'trac'
+    dd['bcmag']   = -0.06
     rmin,rmax     = get_rmin_rmax(args)
     dd['radii']   =  [np.random.uniform(rmin,rmax)]
 
@@ -227,7 +228,7 @@ if __name__ == '__main__':
         for iexample,argdict in enumerate(outlist):
             dirname,inputname,outputname,mlinfoname = make_file_names(args,iexample+args.shift)
             
-            print(f'Creating training inputfiles for example {iexample+1} of {args.ntotal} classification')
+            print(f'Creating training inputfiles for example {iexample+1} of {args.ntotal}')
             mesh2d = FyPyMesh(inputdir=dirname,outputdir=dirname)
             os.mkdir(dirname)
             mesh2d.create_mesh_2d(**argdict)
