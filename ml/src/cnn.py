@@ -506,12 +506,15 @@ def post_process_cnn(mltype,iptype,ntrain,nvalid,ntest,prediction,test_data,outp
 
     if (mltype =='field'):
         nn        = np.linalg.norm(test_data.labels.field[:,:,:,1] - prediction)
-        inputname = 'input0.json.in'
-        with open(inputname,'r') as fin:
-            dd    = json.load(fin)
-            coord = np.asarray(dd['coord'])
-            xx    = coord[:,0].reshape(nnodex,nnodey).T
-            yy    = coord[:,1].reshape(nnodex,nnodey).T
+        
+        #inputname = 'input0.json.in'
+        #with open(inputname,'r') as fin:
+        #    dd    = json.load(fin)
+        #    coord = np.asarray(dd['coord'])
+
+        coord = np.load('coord.npy')    
+        xx    = coord[:,0].reshape(nnodex,nnodey).T
+        yy    = coord[:,1].reshape(nnodex,nnodey).T
 
 
         print(f'norm of diff between predicted and correct fields {nn}')

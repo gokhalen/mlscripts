@@ -76,6 +76,7 @@ def update_params(params,args):
     # we can make a more elegant solution later.
     # based on updating dictionaries if values are not none
     newparams = params.copy()
+    
     if (args.ntrain != None): newparams['ntrain'] = args.ntrain
     if (args.nvalid != None): newparams['nvalid'] = args.nvalid
     if (args.ntest  != None): newparams['ntest']  = args.ntest
@@ -89,8 +90,10 @@ def update_params(params,args):
     newparams['optimizer'] = args.optimizer
     newparams['iptype']    = args.iptype
     newparams['mode']      = args.mode
-    newparams['nimg']      = args.nimg
+    newparams['nimg']      = min(args.nimg,newparams['ntest'])
     
+    if ( args.nimg > newparams['ntest']):
+        print(f'{__file__}: nimg > ntest ...setting nimg to ntest')
 
     newparams['outputdir'] = args.mltype+'_'+args.iptype+'_output'
     if ( args.outputdir != None):

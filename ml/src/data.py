@@ -34,7 +34,6 @@ def select_input_comps(data,iptype):
                   'strainyy':data.strain[...,1:2],
                   'strainxxyy':data.strain[...,0:2]
                  }
-
     
     return CNNData(images=images_dict[iptype],
                    strain=strain_dict[iptype],
@@ -55,8 +54,43 @@ def split_cnndata(cnndata,start,stop):
                      labels=labels)
     return out
 
+
+def normalize_input_cnndata(data,ntrain,nvalid,ntest):
+    # should be called before select_input_comps
+    # note: normalization parameters are computed over training images only
+    
+    uxmax  = np.max(np.abs(data.images[0:ntrain,:,:,0]))
+    uxnorm = data.images[:,:,:,0]/uxmax
+    
+    uymax  = np.max(np.abs(data.images[0:ntrain,:,:,1]))
+    uynorm = data.images[:,:,:,1]/uymax
+
+    new_images = np.stack((uxnorm,uynorm),axis=-1)
+
+    exxmax = np.max(np.abs(data.strain[0:ntrain,:,:,0]))
+    eyymax = np.max(np.abs(data.strain[0:ntrain,:,:,1]))
+    exymax = np.max(np.abs(data.strain[0:ntrain,:,:,2]))
+
+    exxnorm = data.strain[:,:,:,0]/exxmax
+    eyynorm = data.strain[:,:,:,1]/eyymax
+    exynorm = data.strain[:,:,:,2]/exymax
+
+    new_strain = np.stack((exxnorm,eyynorm,exynorm),axis=-1)
+
+    cnndata_norm_input = CNNData(images=new_images,
+                                 strain=new_strain,
+                                 labels=data.labels
+                                )
+    
+    return cnndata_norm_input
+
+
 def get_data(ntrain,nvalid,ntest,nnodex,nnodey,prefix,outputdir,iptype):
     # reads training,validation and test data and returns it
+    # select_input_comps and normalize_cnndata are called
+    # strain and image are normalized
+    
+    
     # prefix is the prefix of the directories which contain training validation and test data
     # ntrain,nvalid,ntest are integers and should sum up to less than the number of files
     # returned by glob
@@ -76,7 +110,8 @@ def get_data(ntrain,nvalid,ntest,nnodex,nnodey,prefix,outputdir,iptype):
                         os.path.exists('center.npy') and
                         os.path.exists('radius.npy') and
                         os.path.exists('value.npy')  and
-                        os.path.exists('field.npy')  
+                        os.path.exists('field.npy')  and
+                        os.path.exists('coord.npy')
                         )
     
     if bool_files_exist :
@@ -116,6 +151,13 @@ def get_data(ntrain,nvalid,ntest,nnodex,nnodey,prefix,outputdir,iptype):
         ntotal = len(gg);
         assert (ntotal >= nsum),'Number of examples not sufficient'
         full_data  = read_data(0,nsum,prefix,nnodex,nnodey,'full_data',outputdir=outputdir)
+
+        #  read coord
+        with open(f'{prefix}0/input0.json.in') as fin:
+            dd = json.load(fin)
+            coord = np.asarray(dd['coord'])
+            
+        
         np.save('images',full_data.images)
         np.save('strain',full_data.strain)
         np.save('binary',full_data.labels.binary)
@@ -123,8 +165,11 @@ def get_data(ntrain,nvalid,ntest,nnodex,nnodey,prefix,outputdir,iptype):
         np.save('radius',full_data.labels.radius)
         np.save('value', full_data.labels.value)
         np.save('field', full_data.labels.field)
+        np.save('coord',coord)
 
-
+        
+    # normalize data first
+    full_data  = normalize_input_cnndata(data=full_data,ntrain=ntrain,nvalid=nvalid,ntest=ntest)
     full_data  = select_input_comps(data=full_data,iptype=iptype)
         
     train_data = split_cnndata(full_data,0,ntrain)
@@ -193,41 +238,20 @@ def read_data(start,stop,prefix,nnodex,nnodey,strtype,outputdir):
         with open(outputname,'r') as fin:
             dd   = json.load(fin)
             sol  = np.asarray(dd['solution'])
+            exx  = np.asarray(dd['exx'])
+            eyy  = np.asarray(dd['eyy'])
+            exy  = np.asarray(dd['exy'])
+            
             # do not reshape.(nnodey,nnodex)
             solx = sol[:,0].reshape(nnodex,nnodey).T
             soly = sol[:,1].reshape(nnodex,nnodey).T
             images[iloc,:,:,0] = solx
             images[iloc,:,:,1] = soly
 
-            # copied from strain.py script
-            ux  = images[iloc,:,:,0].T
-            uy  = images[iloc,:,:,1].T
-            
-            exx = np.diff(ux,axis=0)/dx
-            eyy = np.diff(uy,axis=1)/dy
-            
-            ux_y = np.diff(ux,axis=1)/dy
-            uy_x = np.diff(uy,axis=0)/dx
-
-            # zero padding
-            px=np.zeros((1,nnodey),dtype='float64')
-            py=np.zeros((nnodex,1),dtype='float64')
-
-            exx  = np.vstack((exx,px))
-            eyy  = np.hstack((eyy,py))
-            ux_y = np.hstack((ux_y,py))
-            uy_x = np.vstack((uy_x,px))
-            exy  = 0.5*(ux_y + uy_x)
-
-            # normalization
-            # exx  = exx / np.max(np.abs(exx))
-            # eyy  = eyy / np.max(np.abs(eyy))
-            # exy  = exy / np.max(np.abs(exy))
-
             # put into strain array
-            strain[iloc,:,:,0]=exx.T
-            strain[iloc,:,:,1]=eyy.T
-            strain[iloc,:,:,2]=exy.T
+            strain[iloc,:,:,0]=exx.reshape(nnodex,nnodey).T
+            strain[iloc,:,:,1]=eyy.reshape(nnodex,nnodey).T
+            strain[iloc,:,:,2]=exy.reshape(nnodex,nnodey).T
 
         # get field
         with open(inputname,'r') as fin:
@@ -351,4 +375,31 @@ def inverse_scale_prediction(mltype,prediction,length,breadth,valmin,valmax,vala
 
     if (mltype == 'field'):
         return prediction
+
+
+    
+            # copied from strain.py script
+            #ux  = images[iloc,:,:,0].T
+            #uy  = images[iloc,:,:,1].T
+            
+            #exx = np.diff(ux,axis=0)/dx
+            #eyy = np.diff(uy,axis=1)/dy
+            
+            #ux_y = np.diff(ux,axis=1)/dy
+            #uy_x = np.diff(uy,axis=0)/dx
+
+            # zero padding
+            #px=np.zeros((1,nnodey),dtype='float64')
+            #py=np.zeros((nnodex,1),dtype='float64')
+
+            #exx  = np.vstack((exx,px))
+            #eyy  = np.hstack((eyy,py))
+            #ux_y = np.hstack((ux_y,py))
+            #uy_x = np.vstack((uy_x,px))
+            #exy  = 0.5*(ux_y + uy_x)
+
+            # normalization
+            # exx  = exx / np.max(np.abs(exx))
+            # eyy  = eyy / np.max(np.abs(eyy))
+            # exy  = exy / np.max(np.abs(exy))
 

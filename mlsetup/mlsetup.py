@@ -255,7 +255,7 @@ if __name__ == '__main__':
     if (args.solve == 'True'):
         for iexample in range(args.ntotal):
              dirname,inputname,outputname,mlinfoname = make_file_names(args,iexample+args.shift)
-             print(f'Solving training example {iexample+1} of {args.ntotal} classification')
+             print(f'Solving training example {iexample+1} of {args.ntotal}')
              tsolve = Timer('Solve timer',verbose=0)
              with tsolve:
                  fypyargs = FyPyArgs(
