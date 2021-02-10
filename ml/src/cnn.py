@@ -516,17 +516,24 @@ def post_process_cnn(mltype,iptype,ntrain,nvalid,ntest,prediction,test_data,outp
         xx    = coord[:,0].reshape(nnodex,nnodey).T
         yy    = coord[:,1].reshape(nnodex,nnodey).T
 
+        # figure out how many zeros to pad
+        nzfill = len(str(nimg))
 
         print(f'norm of diff between predicted and correct fields {nn}')
         # nimg = test_data.labels.field.shape[0]
+        os.system(f'rm {outputdir}/mucomp*.png')
         for ifield in range(nimg):
             print(f'plotting test example {ifield+1} out of {nimg}')
             mucorr = test_data.labels.field[ifield,:,:,1]
             mupred = prediction[ifield,:,:]
             # plotfield(xx,yy,field,title,fname,outputdir):
             # plotfield(xx,yy,mucorr,'mu corr'+str(ifield),'mucorr'+str(ifield),outputdir=outputdir)
-            # plotfield(xx,yy,mupred,'mu pred'+str(ifield),'mupred'+str(ifield),outputdir=outputdir) 
-            subplotfields(xx,yy,[mucorr,mupred],['mu correct','mu pred'],'mucomp'+str(ifield),outputdir=outputdir)            
+            # plotfield(xx,yy,mupred,'mu pred'+str(ifield),'mupred'+str(ifield),outputdir=outputdir)
+            fname = 'mucomp'+str(ifield).zfill(nzfill)
+            subplotfields(xx,yy,[mucorr,mupred],[f'mu correct {ifield}',f'mu pred {ifield}'],fname,outputdir=outputdir)
+
+        os.chdir(outputdir)
+        os.system(f'ffmpeg.exe -r 4 -i mucomp%0{nzfill}d.png -vcodec mpeg4 -y movie.mp4')
             
     # this isn't really necessary, we're not doing anything with the
     # output of this post_process_cnn
