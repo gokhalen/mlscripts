@@ -41,6 +41,7 @@ if __name__ =='__main__':
     mode      = newparams['mode']
     outputdir = newparams['outputdir']
     nimg      = newparams['nimg']
+    noise     = newparams['noise']
 
     if ( not os.path.exists(outputdir)):
         os.mkdir(outputdir)
@@ -59,6 +60,9 @@ if __name__ =='__main__':
                                                 iptype=iptype
                                                )
 
+    breakpoint()
+
+    test_data = addnoise(test_data,noise,nnodex,nnodey)
 
     tt = (train_data,valid_data,test_data)
 
@@ -85,7 +89,7 @@ if __name__ =='__main__':
                                                                               valave=valave
                                                                              )
 
-
+    
     tt=(train_data_scaled,valid_data_scaled,test_data_scaled)
 
 
@@ -128,8 +132,6 @@ if __name__ =='__main__':
                                test_data=test_data,
                                outputdir=outputdir
                               )
-
-    # sys.exit(f'{__file__}: Exiting after save_prediction')
 
     postproc = post_process_cnn( mltype=mltype,
                                  iptype=iptype,

@@ -57,9 +57,19 @@ def get_args():
                         default=32
                         )
 
-    
 
+    # a random number is generated between nn \in (-noise,+noise) and a
+    # factor 1+nn is computed
+    # the displacement is multiplied by this factor
+    parser.add_argument('--noise',help='noise perturbation',
+                        required=False,type=float,
+                        default=0.00
+                       )
+    
     args = parser.parse_args()
+
+    assert ( 0.0 <= args.noise < 1.0 ), 'args.noise not in range [0,1)'
+    
     return args
 
 def get_params(fname):
@@ -91,11 +101,12 @@ def update_params(params,args):
     newparams['iptype']    = args.iptype
     newparams['mode']      = args.mode
     newparams['nimg']      = min(args.nimg,newparams['ntest'])
+    newparams['noise']     = args.noise
     
     if ( args.nimg > newparams['ntest']):
         print(f'{__file__}: nimg > ntest ...setting nimg to ntest')
 
-    newparams['outputdir'] = args.mltype+'_'+args.iptype+'_output'
+    newparams['outputdir'] = args.mltype+'_'+args.iptype+f'_noise_{args.noise}_output'
     if ( args.outputdir != None):
         newparams['outputdir'] = args.outputdir
         

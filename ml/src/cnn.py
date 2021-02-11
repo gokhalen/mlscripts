@@ -505,12 +505,10 @@ def post_process_cnn(mltype,iptype,ntrain,nvalid,ntest,prediction,test_data,outp
         
 
     if (mltype =='field'):
-        nn        = np.linalg.norm(test_data.labels.field[:,:,:,1] - prediction)
-        
-        #inputname = 'input0.json.in'
-        #with open(inputname,'r') as fin:
-        #    dd    = json.load(fin)
-        #    coord = np.asarray(dd['coord'])
+        normdiff  = np.linalg.norm(test_data.labels.field[:,:,:,1] - prediction)
+        test_size = prediction.shape[0]
+        test_mse  = np.linalg.norm(normdiff)**2.0 / (test_size*nnodex*nnodey)
+        print(f'{__file__}: test set mse=',test_mse)
 
         coord = np.load('coord.npy')    
         xx    = coord[:,0].reshape(nnodex,nnodey).T
@@ -518,8 +516,7 @@ def post_process_cnn(mltype,iptype,ntrain,nvalid,ntest,prediction,test_data,outp
 
         # figure out how many zeros to pad
         nzfill = len(str(nimg))
-
-        print(f'norm of diff between predicted and correct fields {nn}')
+ 
         # nimg = test_data.labels.field.shape[0]
         os.system(f'rm {outputdir}/mucomp*.png')
         for ifield in range(nimg):
@@ -533,7 +530,7 @@ def post_process_cnn(mltype,iptype,ntrain,nvalid,ntest,prediction,test_data,outp
             subplotfields(xx,yy,[mucorr,mupred],[f'mu correct {ifield}',f'mu pred {ifield}'],fname,outputdir=outputdir)
 
         os.chdir(outputdir)
-        os.system(f'ffmpeg.exe -r 4 -i mucomp%0{nzfill}d.png -vcodec mpeg4 -y movie.mp4')
+        os.system(f'ffmpeg.exe -r 4 -i mucomp%0{nzfill}d.png -vcodec mpeg4 -y {mltype}_{iptype}_movie.mp4')
             
     # this isn't really necessary, we're not doing anything with the
     # output of this post_process_cnn

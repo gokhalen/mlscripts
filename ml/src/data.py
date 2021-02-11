@@ -20,10 +20,10 @@ def select_input_comps(data,iptype):
     images_dict = {'images':data.images,
                   'imagesx':data.images[...,0:1],
                   'imagesy':data.images[...,1:2],
-                  'strain':data.images,
-                  'strainxx':data.images,
-                  'strainyy':data.images,
-                  'strainxxyy':data.images
+                  'strain':data.strain,
+                  'strainxx':data.strain,
+                  'strainyy':data.strain,
+                  'strainxxyy':data.strain
                  }
 
     strain_dict = {'images':data.images,
@@ -169,9 +169,11 @@ def get_data(ntrain,nvalid,ntest,nnodex,nnodey,prefix,outputdir,iptype):
 
         
     # normalize data first
+    breakpoint()
     full_data  = normalize_input_cnndata(data=full_data,ntrain=ntrain,nvalid=nvalid,ntest=ntest)
+    breakpoint()
     full_data  = select_input_comps(data=full_data,iptype=iptype)
-        
+    breakpoint()
     train_data = split_cnndata(full_data,0,ntrain)
     valid_data = split_cnndata(full_data,ntrain,ntrain+nvalid)
     test_data  = split_cnndata(full_data,ntrain+nvalid,nsum)
@@ -219,6 +221,9 @@ def read_data(start,stop,prefix,nnodex,nnodey,strtype,outputdir):
         outsoly = '/uyml'+str(ii)+'.png';
         outlam  = '/lamml'+str(ii)+'.png';
         outmu   = '/muml'+str(ii)+'.png';
+        outexx  = '/exxml'+str(ii)+'.png';
+        outeyy  = '/eyyml'+str(ii)+'.png';
+        outexy  = '/exyml'+str(ii)+'.png';
         
         with open(mlinfoname,'r') as fin:
             dd = json.load(fin)
@@ -261,13 +266,17 @@ def read_data(start,stop,prefix,nnodex,nnodey,strtype,outputdir):
             mu   = prop[:,1].reshape(nnodex,nnodey).T
             field_label[iloc,:,:,0] = lam
             field_label[iloc,:,:,1] = mu
-            
 
         plotfield(xx,yy,images[iloc,:,:,0],'ux',outsolx,outputdir=prefix+str(ii))
         plotfield(xx,yy,images[iloc,:,:,1],'uy',outsoly,outputdir=prefix+str(ii))
         
         plotfield(xx,yy,field_label[iloc,:,:,0],'lam',outlam,outputdir=prefix+str(ii))
         plotfield(xx,yy,field_label[iloc,:,:,1],'mu',outmu,outputdir=prefix+str(ii))
+
+        # plot strains
+        plotfield(xx,yy,strain[iloc,:,:,0],'exx',outexx,outputdir=prefix+str(ii))
+        plotfield(xx,yy,strain[iloc,:,:,1],'eyy',outeyy,outputdir=prefix+str(ii))
+        plotfield(xx,yy,strain[iloc,:,:,2],'exy',outexy,outputdir=prefix+str(ii))
 
     listbin = list(binary_label)
     _h      = listbin.count(0)
@@ -309,7 +318,27 @@ def inverse_scale_all(datatuple,length,breadth,valmin,valmax,valave):
         ll.append(ss)
 
     return tuple(ll)
+
+
+def addnoise(data,noise,nnodex,nnodey,plotbool=False):
+    # data : CNNData Tuple
+    # noise: noise factor
+    print('-'*80,f'\n Adding {noise} noise\n','-'*80,sep='')
+
+    ntest   = data.strain.shape[0]
+    nfactor = np.random.uniform(1-noise,1+noise)
+    for itest in range(ntest):
+        breakpoint()
+        for istrain in range(3):
+            noisemaker = np.random.uniform(1.0-noise,1.0+noise,size=(nnodey,nnodex))
+            data.strain[itest,:,:,istrain] *= noisemaker
+
+        for idisp in range(2):
+            noisemaker = np.random.uniform(1.0-noise,1.0+noise,size=(nnodey,nnodex))
+            data.images[itest,:,:,idisp] *= noisemaker
         
+    newdata = data
+    return newdata
 
 def forward_scale_data(data,length,breadth,valmin,valmax,valave):
     scaled_center = forward_scale_center(data.labels.center,length,breadth)
