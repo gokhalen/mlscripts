@@ -176,7 +176,7 @@ def load_or_train_and_plot_cnn(mltype,iptype,train_data,valid_data,nnodex,nnodey
     model_dir          = outputdir+'/' + mltype+'_'+iptype+'_model'
     check_dir          = outputdir+'/' + mltype+'_'+iptype+'_check_model'
     history_file       = outputdir+'/' + mltype+'_'+iptype+'_model_history.json'
-    best_callback_file = outputdir+'/'+mltype+'_'+iptype+'_best_callback.json' 
+    best_callback_file = outputdir+'/' + mltype+'_'+iptype+'_best_callback.json' 
 
     callback_list = get_checkpoint(mltype=mltype,chkdir=check_dir)
     

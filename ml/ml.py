@@ -60,8 +60,8 @@ if __name__ =='__main__':
                                                 iptype=iptype
                                                )
 
-    breakpoint()
 
+    # be careful here: addnoise modifies np arrays in test_data and returns them
     test_data = addnoise(test_data,noise,nnodex,nnodey)
 
     tt = (train_data,valid_data,test_data)
@@ -77,9 +77,6 @@ if __name__ =='__main__':
 
     # vf = forward_scale_value(train_data.labels.value,valmin=valmin,valmax=valmax,valave=valave)
     # vi = inverse_scale_value(vf,valmin=valmin,valmax=valmax,valave=valave)
-
-    # print(np.linalg.norm(train_data.labels.value-vi))
-    # sys.exit()
      
     train_data_scaled,valid_data_scaled,test_data_scaled = forward_scale_all( datatuple=tt,
                                                                               length=length,

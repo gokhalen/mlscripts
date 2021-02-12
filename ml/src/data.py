@@ -20,15 +20,15 @@ def select_input_comps(data,iptype):
     images_dict = {'images':data.images,
                   'imagesx':data.images[...,0:1],
                   'imagesy':data.images[...,1:2],
-                  'strain':data.strain,
-                  'strainxx':data.strain,
-                  'strainyy':data.strain,
-                  'strainxxyy':data.strain
+                  'strain':data.images,
+                  'strainxx':data.images,
+                  'strainyy':data.images,
+                  'strainxxyy':data.images
                  }
 
-    strain_dict = {'images':data.images,
-                  'imagesx':data.images,
-                  'imagesy':data.images,
+    strain_dict = {'images':data.strain,
+                  'imagesx':data.strain,
+                  'imagesy':data.strain,
                   'strain':data.strain,
                   'strainxx':data.strain[...,0:1],
                   'strainyy':data.strain[...,1:2],
@@ -169,11 +169,8 @@ def get_data(ntrain,nvalid,ntest,nnodex,nnodey,prefix,outputdir,iptype):
 
         
     # normalize data first
-    breakpoint()
     full_data  = normalize_input_cnndata(data=full_data,ntrain=ntrain,nvalid=nvalid,ntest=ntest)
-    breakpoint()
     full_data  = select_input_comps(data=full_data,iptype=iptype)
-    breakpoint()
     train_data = split_cnndata(full_data,0,ntrain)
     valid_data = split_cnndata(full_data,ntrain,ntrain+nvalid)
     test_data  = split_cnndata(full_data,ntrain+nvalid,nsum)
@@ -321,23 +318,38 @@ def inverse_scale_all(datatuple,length,breadth,valmin,valmax,valave):
 
 
 def addnoise(data,noise,nnodex,nnodey,plotbool=False):
+    # be careful here: addnoise modifies np arrays in data and returns data
+    # addnoise can be applied on test data before or after normalization
+    # this is because the normalization factor is computed on the training data
+    # if the normalization factor was being computed on the test_data, then
+    # things would be different.
+    
     # data : CNNData Tuple
     # noise: noise factor
+    # plotbool: decide whether or not to plot data
+    
     print('-'*80,f'\n Adding {noise} noise\n','-'*80,sep='')
 
     ntest   = data.strain.shape[0]
+    nstrain = data.strain.shape[-1]    # number of strain components: see select_input_comps
+    nimages = data.images.shape[-1]    # number of displacement components: see select_input_comps
+    
     nfactor = np.random.uniform(1-noise,1+noise)
+    # nmaker  = np.empty(cstrain.shape,dtype='float64')
+
     for itest in range(ntest):
-        breakpoint()
-        for istrain in range(3):
+
+        for istrain in range(nstrain):
             noisemaker = np.random.uniform(1.0-noise,1.0+noise,size=(nnodey,nnodex))
             data.strain[itest,:,:,istrain] *= noisemaker
+            # nmaker[itest,:,:,istrain]       = noisemaker
 
-        for idisp in range(2):
+        for idisp in range(nimages):
             noisemaker = np.random.uniform(1.0-noise,1.0+noise,size=(nnodey,nnodex))
             data.images[itest,:,:,idisp] *= noisemaker
-        
+
     newdata = data
+
     return newdata
 
 def forward_scale_data(data,length,breadth,valmin,valmax,valave):
