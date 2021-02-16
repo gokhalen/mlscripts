@@ -225,9 +225,11 @@ def read_data(start,stop,prefix,nnodex,nnodey,strtype,outputdir):
         with open(mlinfoname,'r') as fin:
             dd = json.load(fin)
             binary_label[iloc] = dd['label'][0]
-            center_label[iloc] = np.asarray(dd['centers'])  # assume only one inclusion
-            radius_label[iloc] = dd['radii'][0]
-            mu_label[iloc]     = dd['mu']
+            # center_label, radius_label, mu_label are used only for parameter prediction
+            # they are not used for field prediction
+            center_label[iloc] = np.asarray(dd['centers'])[-1] 
+            radius_label[iloc] = dd['radii'][-1]
+            mu_label[iloc]     = dd['mu'][-1]
             if dd['stftype'] == 'homogeneous':
                 print('WARNING: Homogeneous mu_label set to mu_back')
                 mu_label[iloc]     = dd['muback']

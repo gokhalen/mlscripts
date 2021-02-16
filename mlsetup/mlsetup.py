@@ -69,6 +69,7 @@ def getargs():
     parser.add_argument('--nvalid',help='number of validation examples to generate',required=False,type=int)
     parser.add_argument('--ntest', help='number of test examples to generate',      required=False,type=int)
     parser.add_argument('--nhomo',help='number of homogeneous examples to generate',required=False,type=int,default=4)
+    parser.add_argument('--ninc',help='max number of inclusions to add',required=False,type=int,default=3)
     parser.add_argument('--shift',help='shift for numbering',required=False,type=int,default=0)
     
     args = parser.parse_args()
@@ -196,13 +197,21 @@ def generate_random(args):
     dd['bctype']  = 'trac'
     dd['bcmag']   = -0.06
     rmin,rmax     = get_rmin_rmax(args)
-    dd['radii']   =  [np.random.uniform(rmin,rmax)]
+
 
     # make sure the center of the inclusion is mostly inside the domain
-    xcen          = np.random.uniform(0.0+0.05*args.length,args.length*0.95)
-    ycen          = np.random.uniform(0.0+0.05*args.breadth,args.breadth*0.95)
-    dd['centers'] = [[xcen,ycen]]
-    dd['mu']      = np.random.uniform(args.mumin,args.mumax)
+    choicelist = list(np.arange(1,args.ninc+1))
+    nincrand   = np.random.choice(choicelist)
+    
+    xcen         = np.random.uniform(0.0+0.05*args.length,args.length*0.95,size=(nincrand,))
+    ycen         = np.random.uniform(0.0+0.05*args.breadth,args.breadth*0.95,size=(nincrand,))
+    *cenlist,    = zip(xcen,ycen)
+
+    dd['radii']   = list(np.random.uniform(rmin,rmax,size=(nincrand,)))
+    dd['centers'] = cenlist
+    dd['mu']      = list(np.random.uniform(args.mumin,args.mumax,size=(nincrand,)))
+
+    
     dd['muback']  = args.muback
     dd['nu']      = args.nu
     dd['eltype']  = args.eltype
