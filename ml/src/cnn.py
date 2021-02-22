@@ -66,9 +66,9 @@ def define_cnn(mltype,iptype,nnodex,nnodey,optimizer):
                   }
     activation = {'binary':'sigmoid',
                   'center':'sigmoid',
-                  'radius':'linear',
-                  'value' :'linear',
-                  'field' :'linear'
+                  'radius':'softplus',
+                  'value' :'softplus',
+                  'field' :'softplus'
                   }
     metrics    = {'binary':['accuracy'],
                   'center':[],
@@ -508,7 +508,10 @@ def post_process_cnn(mltype,iptype,ntrain,nvalid,ntest,prediction,test_data,outp
         normdiff  = np.linalg.norm(test_data.labels.field[:,:,:,1] - prediction)
         test_size = prediction.shape[0]
         test_mse  = np.linalg.norm(normdiff)**2.0 / (test_size*nnodex*nnodey)
-        print(f'{__file__}: test set mse=',test_mse)
+        print(f'{__file__}: test set mse = ',test_mse)
+
+        minpred = np.min(prediction)
+        print(f'{__file__}: min shear modulus = ',minpred)
 
         coord = np.load('coord.npy')    
         xx    = coord[:,0].reshape(nnodex,nnodey).T
