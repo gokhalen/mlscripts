@@ -69,7 +69,7 @@ def getargs():
     parser.add_argument('--nvalid',help='number of validation examples to generate',required=False,type=int)
     parser.add_argument('--ntest', help='number of test examples to generate',      required=False,type=int)
     parser.add_argument('--nhomo',help='number of homogeneous examples to generate',required=False,type=int,default=4)
-    parser.add_argument('--ninc',help='max number of inclusions to add',required=False,type=int,default=3)
+    parser.add_argument('--ninc',help='max number of inclusions to add',required=False,type=int,default=1)
     parser.add_argument('--shift',help='shift for numbering',required=False,type=int,default=0)
     
     args = parser.parse_args()

@@ -25,7 +25,7 @@ def plotall_and_save(mltype,iptype,history,outputdir):
         plt.ylabel(ikey)
         plt.grid(True,which='both')
         plt.tight_layout()
-        plt.savefig(f'{outputdir}/{plot_title}'+'_plot_'+ikey+'.png')
+        plt.savefig(f'{outputdir}/{plot_title}'+'_plot_'+ikey+'.png',bbox_inches='tight')
         np.save(arr=data,file=f'{outputdir}/{plot_title}'+'_plot_'+ikey)
 
 def plotcurves(xdata,ydata,xlabel,ylabel,title,outputdir,legend=None,fname=None,lw=1):
@@ -41,7 +41,7 @@ def plotcurves(xdata,ydata,xlabel,ylabel,title,outputdir,legend=None,fname=None,
 
     plt.tight_layout()
     if (fname is not None):
-        plt.savefig(outputdir+'/'+fname)  
+        plt.savefig(outputdir+'/'+fname,bbox_inches='tight')  
 
 def plotfield(xx,yy,field,title,fname,outputdir):
     
@@ -51,7 +51,7 @@ def plotfield(xx,yy,field,title,fname,outputdir):
     plt.colorbar()
     ax = plt.gca()
     ax.set_aspect('equal')
-    plt.savefig(outputdir+'/'+fname)
+    plt.savefig(outputdir+'/'+fname,bbox_inches='tight')
     plt.close()
 
 
@@ -85,6 +85,6 @@ def subplotfields(xx,yy,fields,titles,fname,outputdir):
         ax.set_aspect('equal')
 
     plt.tight_layout()
-    plt.savefig(outputdir+'/'+fname)
+    plt.savefig(outputdir+'/'+fname,bbox_inches='tight')
     plt.close()
 

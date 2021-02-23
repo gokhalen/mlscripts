@@ -281,6 +281,7 @@ def predict_cnn(mltype,iptype,cnn,test_data,nnodex,nnodey):
                 }
 
     out = cnn.predict(eval(f'test_data.{data_dict[iptype]}'))
+
     if ( mltype == 'binary'):
         out = out > 0.5
         out = out.reshape((-1,))

@@ -350,8 +350,11 @@ def addnoise(data,noise,nnodex,nnodey,plotbool=False):
                 clean  = data.strain[-1,:,:,-1] / noisemaker
                 noisy  = data.strain[-1,:,:,-1] 
                 noisepercen = np.linalg.norm(noisy - clean) / np.linalg.norm(noisy)
-                snrdb  = 20*np.log10(1.0/noisepercen)
-                print('snr in dB in strain ==',snrdb)
+                if ( noisepercen != 0.0):
+                    snrdb  = 20*np.log10(1.0/noisepercen)
+                    print('snr in dB in strain ==',snrdb)
+                else:
+                    print('no noise in strain')
 
         for idisp in range(nimages):
             noisemaker = np.random.uniform(1.0-noise,1.0+noise,size=(nnodey,nnodex))
@@ -361,8 +364,12 @@ def addnoise(data,noise,nnodex,nnodey,plotbool=False):
                 clean = data.images[-1,:,:,-1] / noisemaker
                 noisy = data.images[-1,:,:,-1]
                 noisepercen = np.linalg.norm(noisy - clean) / np.linalg.norm(noisy)
-                snrdb  = 20*np.log10(1.0/noisepercen)
-                print('snr in dB in disp ==',snrdb)
+                if ( noisepercen != 0.0):
+                    snrdb  = 20*np.log10(1.0/noisepercen)
+                    print('snr in dB in disp ==',snrdb)
+
+                else:
+                    print('no noise in disp')
 
     newdata = data
 
