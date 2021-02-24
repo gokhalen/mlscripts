@@ -300,11 +300,11 @@ def predict_cnn(mltype,iptype,cnn,test_data,nnodex,nnodey):
 
     return out
 
-def save_prediction_test_data(mltype,iptype,prediction,test_data,outputdir):
-    np.save(outputdir+'/'+mltype+'_'+iptype+'_prediction',prediction)
-    np.save(outputdir+'/'+mltype+'_'+iptype+'_correct',eval(f'test_data.labels.{mltype}'))
-    np.save(outputdir+'/'+mltype+'_'+iptype+'_test_images',test_data.images)
-    np.save(outputdir+'/'+mltype+'_'+iptype+'_test_strain',test_data.strain)
+def save_prediction_test_data(mltype,iptype,noise,prediction,test_data,outputdir):
+    np.save(outputdir+'/'+mltype+'_'+iptype+'_noise_'+noise+'_prediction',prediction)
+    np.save(outputdir+'/'+mltype+'_'+iptype+'_noise_'+noise+'_correct',eval(f'test_data.labels.{mltype}'))
+    np.save(outputdir+'/'+mltype+'_'+iptype+'_noise_'+noise+'_test_images',test_data.images)
+    np.save(outputdir+'/'+mltype+'_'+iptype+'_noise_'+noise+'_test_strain',test_data.strain)
 
 
 def percentages(ytrue,ypred,percen,ntest,msg,logfile):

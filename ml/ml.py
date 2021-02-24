@@ -125,6 +125,7 @@ if __name__ =='__main__':
         
     save_prediction_test_data( mltype=mltype,
                                iptype=iptype,
+                               noise=str(noise),
                                prediction=prediction_inv,
                                test_data=test_data,
                                outputdir=outputdir

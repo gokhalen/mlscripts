@@ -1,13 +1,11 @@
-0) After reading strain and displacement data, feature scale both.
 1) Incompressible model, only one component of displacement field, noise in disp (noise will be hard to handle), multiple displacement fields will help
 
 
 
 
 -100) Post Process all data sets (ntrain,ntest,nvalid)
--99)  Regularization for layers
 
--11) Validation loss is actually increasing with iterations for value prediction
+
 -9) Use the sigmoid function to restrict range of values of mu between mumin and mumax
 -8) Look at other peoples' Network architectures
 -7) Learning rate
