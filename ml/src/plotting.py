@@ -18,7 +18,7 @@ def plotall_and_save(mltype,iptype,history,outputdir):
         # plot losses on log scale
         if 'loss' in ikey:
             yscale = 'log'
-        plt.plot(epochs,data)
+        plt.plot(epochs,data,linewidth='4')
         plt.yscale(yscale)
         plt.title(plot_title)
         plt.xlabel('epochs')
