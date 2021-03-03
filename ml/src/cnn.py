@@ -8,7 +8,6 @@ import sys
 import json
 import pickle
 
-
 from sklearn.metrics import confusion_matrix, accuracy_score
 from .datastrc import *
 from .plotting import plotall_and_save,plotcurves,plotfield,subplotfields
@@ -37,6 +36,20 @@ def get_checkpoint(mltype,chkdir):
     
 
 def define_cnn(mltype,iptype,nnodex,nnodey,optimizer):
+
+    # shift function for activation of output
+    muboundmin = 1.0
+    muboundmax = 5.0
+
+    def shift_softplus(x):
+        return tf.constant(10.0)*tf.keras.backend.softplus(x) + tf.constant(1.0)
+
+    def shift_sigmoid(x):
+        return tf.constant(4.0)*tf.keras.backend.sigmoid(x) + tf.constant(1.0)
+
+    def shift_square_both(x):
+        return tf.keras.backend.minimum( x*x + tf.constant(1.0), tf.constant(5.0) )
+    
     # channels is the number of components of input fields
     # if we have 2 components of displacements then nchannel =2
 
@@ -48,6 +61,7 @@ def define_cnn(mltype,iptype,nnodex,nnodey,optimizer):
                     'strainyy':1,
                     'strainxxyy':2
     }
+    
 
     # lookup table to define output layer (units and activation)
     # and loss and other metrics to evaluate
@@ -68,7 +82,7 @@ def define_cnn(mltype,iptype,nnodex,nnodey,optimizer):
                   'center':'sigmoid',
                   'radius':'softplus',
                   'value' :'softplus',
-                  'field' :'softplus'
+                  'field' :shift_square_both
                   }
     metrics    = {'binary':['accuracy'],
                   'center':[],
@@ -327,7 +341,7 @@ def percentages(ytrue,ypred,percen,ntest,msg,logfile):
             fout.write(outstr+'\n')
         
 
-def post_process_cnn(mltype,iptype,ntrain,nvalid,ntest,prediction,test_data,outputdir,nnodex,nnodey,nimg):
+def post_process_cnn(mltype,iptype,noise,ntrain,nvalid,ntest,prediction,test_data,outputdir,nnodex,nnodey,nimg):
     binary_out = None ;    center_out = None;    radius_out = None
     value_out  = None ;    field_out  = None;
 
@@ -534,7 +548,11 @@ def post_process_cnn(mltype,iptype,ntrain,nvalid,ntest,prediction,test_data,outp
             subplotfields(xx,yy,[mucorr,mupred],[f'mu correct {ifield}',f'mu pred {ifield}'],fname,outputdir=outputdir)
 
         os.chdir(outputdir)
-        os.system(f'ffmpeg.exe -r 4 -i mucomp%0{nzfill}d.png -vcodec mpeg4 -y {mltype}_{iptype}_movie.mp4')
+        os.system(f'ffmpeg.exe -r 4 -i mucomp%0{nzfill}d.png -vcodec mpeg4 -y {mltype}_{iptype}_noise_{noise}_movie.mp4')
+        os.system(f'ffmpeg.exe -r 4 -i mucomp%0{nzfill}d.png -c:v libx264 -crf 0 {mltype}_{iptype}_noise_{noise}_movie_hires.mp4')
+        # hi-res: ffmpeg.exe -r 4 -i mucomp%03d.png -c:v libx264 -crf 0 output.mp4
+        # source: https://superuser.com/questions/1429256/producing-lossless-video-from-set-of-png-images-using-ffmpeg
+        
             
     # this isn't really necessary, we're not doing anything with the
     # output of this post_process_cnn
@@ -557,7 +575,7 @@ def cnn_summary(cnn,mltype,iptype,outputdir):
 
     cnn.summary()
 
-
+# ----------------------------------------------------------------------------------------
 def define_cnn_value(mltype,iptype,nnodex,nnodey,optimizer):
     # this function is not used anymore
     if ( iptype == 'images'):

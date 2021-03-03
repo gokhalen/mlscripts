@@ -133,6 +133,7 @@ if __name__ =='__main__':
 
     postproc = post_process_cnn( mltype=mltype,
                                  iptype=iptype,
+                                 noise=noise,
                                  ntrain=ntrain,
                                  nvalid=nvalid,
                                  ntest=ntest,

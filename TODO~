@@ -1,4 +1,5 @@
-1) Incompressible model, only one component of displacement field, noise in disp (noise will be hard to handle), multiple displacement fields will help
+-2000) mltype+iptype+noisetype for movie file
+-1000) mltype+iptype+noisetype for prediction file
 
 
 

@@ -8,7 +8,25 @@ import os
 def plotall_and_save(mltype,iptype,history,outputdir):
     # plot everything in history
     # history is a dictionary which maps keys to lists of numbers
-    plot_title  = mltype+'_'+iptype
+    plot_title    = mltype+'_'+iptype
+    file_title    = mltype+'_'+iptype
+    fontsize      = 18
+    minorticksize = 14
+
+    # change plot title to latex for the cases in the paper
+
+    if ( plot_title == 'field_strainxxyy' ):
+        plot_title    = 'Training CNN '+r'$\epsilon_{xx}$ ' + '& ' + r'$\epsilon_{yy}$'
+        
+    if ( plot_title  == 'field_strainyy'):
+        plot_title    = 'Training CNN '+r'$\epsilon_{yy}$'
+
+    if ( plot_title  == 'field_images'):
+        plot_title    = 'Training CNN '+ r'$u_x$ ' + '& ' + r'$u_y$'
+
+    if ( plot_title  == 'field_imagesy'):
+        plot_title    = 'Training CNN '+ r'$u_y$'
+
          
     for ikey in history.keys():
         plt.figure(ikey)
@@ -20,13 +38,21 @@ def plotall_and_save(mltype,iptype,history,outputdir):
             yscale = 'log'
         plt.plot(epochs,data,linewidth='4')
         plt.yscale(yscale)
-        plt.title(plot_title)
-        plt.xlabel('epochs')
-        plt.ylabel(ikey)
-        plt.grid(True,which='both')
+        plt.title(plot_title,fontsize=fontsize)
+        plt.xlabel('epochs',fontsize=fontsize)
+        
+        if 'val' in ikey:
+            plt.ylabel('validation loss',fontsize=fontsize)
+        else:
+            plt.ylabel('training loss',fontsize=fontsize)
+            
+        plt.grid(True,which='both',linewidth='2')
+        plt.xticks(fontsize=fontsize)
+        plt.yticks(fontsize=fontsize)
+        plt.tick_params(axis='both', which='minor', labelsize=minorticksize)
         plt.tight_layout()
-        plt.savefig(f'{outputdir}/{plot_title}'+'_plot_'+ikey+'.png',bbox_inches='tight')
-        np.save(arr=data,file=f'{outputdir}/{plot_title}'+'_plot_'+ikey)
+        plt.savefig(f'{outputdir}/{file_title}'+'_plot_'+ikey+'.png',bbox_inches='tight')
+        np.save(arr=data,file=f'{outputdir}/{file_title}'+'_plot_'+ikey)
 
 def plotcurves(xdata,ydata,xlabel,ylabel,title,outputdir,legend=None,fname=None,lw=1):
 

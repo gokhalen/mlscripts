@@ -439,31 +439,3 @@ def inverse_scale_prediction(mltype,prediction,length,breadth,valmin,valmax,vala
 
     if (mltype == 'field'):
         return prediction
-
-
-    
-            # copied from strain.py script
-            #ux  = images[iloc,:,:,0].T
-            #uy  = images[iloc,:,:,1].T
-            
-            #exx = np.diff(ux,axis=0)/dx
-            #eyy = np.diff(uy,axis=1)/dy
-            
-            #ux_y = np.diff(ux,axis=1)/dy
-            #uy_x = np.diff(uy,axis=0)/dx
-
-            # zero padding
-            #px=np.zeros((1,nnodey),dtype='float64')
-            #py=np.zeros((nnodex,1),dtype='float64')
-
-            #exx  = np.vstack((exx,px))
-            #eyy  = np.hstack((eyy,py))
-            #ux_y = np.hstack((ux_y,py))
-            #uy_x = np.vstack((uy_x,px))
-            #exy  = 0.5*(ux_y + uy_x)
-
-            # normalization
-            # exx  = exx / np.max(np.abs(exx))
-            # eyy  = eyy / np.max(np.abs(eyy))
-            # exy  = exy / np.max(np.abs(exy))
-
