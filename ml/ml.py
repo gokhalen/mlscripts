@@ -26,22 +26,26 @@ if __name__ =='__main__':
     newparams = update_params(params=params,args=args) # override parameters in params with those in args
 
     # should be able to put these variables into the local variable dictionary programmatically
-    ntrain    = newparams['ntrain']
-    nvalid    = newparams['nvalid']
-    ntest     = newparams['ntest']
-    nnodex    = newparams['nelemx']+1;
-    nnodey    = newparams['nelemy']+1;
-    mltype    = newparams['mltype']
-    iptype    = newparams['iptype']
-    epochs    = newparams['nepochs']
-    prefix    = newparams['prefix']
-    length    = newparams['length']
-    breadth   = newparams['breadth']
-    optimizer = newparams['optimizer']
-    mode      = newparams['mode']
-    outputdir = newparams['outputdir']
-    nimg      = newparams['nimg']
-    noise     = newparams['noise']
+    ntrain     = newparams['ntrain']
+    nvalid     = newparams['nvalid']
+    ntest      = newparams['ntest']
+    nnodex     = newparams['nelemx']+1;
+    nnodey     = newparams['nelemy']+1;
+    mltype     = newparams['mltype']
+    iptype     = newparams['iptype']
+    epochs     = newparams['nepochs']
+    prefix     = newparams['prefix']
+    length     = newparams['length']
+    breadth    = newparams['breadth']
+    optimizer  = newparams['optimizer']
+    activation = newparams['activation']
+    mode       = newparams['mode']
+    outputdir  = newparams['outputdir']
+    nimg       = newparams['nimg']
+    noise      = newparams['noise']
+    mubndmin   = newparams['muback']
+    mubndmax   = newparams['mumax']
+
 
     if ( not os.path.exists(outputdir)):
         os.mkdir(outputdir)
@@ -61,8 +65,9 @@ if __name__ =='__main__':
                                                )
 
 
-    # be careful here: addnoise modifies np arrays in test_data and returns them
+    # be careful here: addnoise modifies np arrays in test_data
     test_data = addnoise(test_data,noise,nnodex,nnodey)
+
 
     tt = (train_data,valid_data,test_data)
 
@@ -96,7 +101,10 @@ if __name__ =='__main__':
                                       valid_data=valid_data_scaled,
                                       nnodex=nnodex,
                                       nnodey=nnodey,
+                                      mubndmin=mubndmin,
+                                      mubndmax=mubndmax,
                                       epochs=epochs,
+                                      activation=activation,
                                       optimizer=optimizer,
                                       mode=mode,
                                       outputdir=outputdir

@@ -43,7 +43,14 @@ def get_args():
     # optimizer
     parser.add_argument('--optimizer', help='name of optimizer',
                         required=False,type=str,default='adam',
-                        choices=['sgd','rmsprop','adam','adadelta','adagrad','adamax','nadam','ftrl'])
+                        choices=['sgd','rmsprop','adam','adadelta','adagrad','adamax','nadam','ftrl']
+                        )
+
+
+    parser.add_argument('--activation',help='activation of output layer for mltype=field',
+                        required=False,type=str,default='softplus',
+                        choices=['softplus','shift_square_both','shift_softplus_both']
+                        )
 
     
     # can either predict with a checkpointed model or continue training with the saved
@@ -95,13 +102,14 @@ def update_params(params,args):
     if (args.ntrain != None) or (args.nvalid !=None) or (args.ntest != None):
         newparams['ntotal'] = newparams['ntrain'] + newparams['nvalid'] + newparams['ntest']
 
-    newparams['mltype']    = args.mltype
-    newparams['nepochs']   = args.nepochs
-    newparams['optimizer'] = args.optimizer
-    newparams['iptype']    = args.iptype
-    newparams['mode']      = args.mode
-    newparams['nimg']      = min(args.nimg,newparams['ntest'])
-    newparams['noise']     = args.noise
+    newparams['mltype']     = args.mltype
+    newparams['nepochs']    = args.nepochs
+    newparams['optimizer']  = args.optimizer
+    newparams['activation'] = args.activation
+    newparams['iptype']     = args.iptype
+    newparams['mode']       = args.mode
+    newparams['nimg']       = min(args.nimg,newparams['ntest'])
+    newparams['noise']      = args.noise
     
     if ( args.nimg > newparams['ntest']):
         print(f'{__file__}: nimg > ntest ...setting nimg to ntest')

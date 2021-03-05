@@ -16,16 +16,16 @@ def plotall_and_save(mltype,iptype,history,outputdir):
     # change plot title to latex for the cases in the paper
 
     if ( plot_title == 'field_strainxxyy' ):
-        plot_title    = 'Training CNN '+r'$\epsilon_{xx}$ ' + '& ' + r'$\epsilon_{yy}$'
+        plot_title    = 'Training CNNc '+r'$\epsilon_{xx}$ ' + '& ' + r'$\epsilon_{yy}$'
         
     if ( plot_title  == 'field_strainyy'):
-        plot_title    = 'Training CNN '+r'$\epsilon_{yy}$'
+        plot_title    = 'Training CNNc '+r'$\epsilon_{yy}$'
 
     if ( plot_title  == 'field_images'):
-        plot_title    = 'Training CNN '+ r'$u_x$ ' + '& ' + r'$u_y$'
+        plot_title    = 'Training CNNc '+ r'$u_x$ ' + '& ' + r'$u_y$'
 
     if ( plot_title  == 'field_imagesy'):
-        plot_title    = 'Training CNN '+ r'$u_y$'
+        plot_title    = 'Training CNNc '+ r'$u_y$'
 
          
     for ikey in history.keys():

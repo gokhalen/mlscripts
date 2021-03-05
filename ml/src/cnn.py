@@ -24,6 +24,7 @@ def get_checkpoint(mltype,chkdir):
     else:
         monitor = 'val_loss'
 
+    # save the best model
     chkpnt = tf.keras.callbacks.ModelCheckpoint(filepath=chkdir,
                                                 save_weights_only=False,
                                                 monitor=monitor,
@@ -32,23 +33,30 @@ def get_checkpoint(mltype,chkdir):
                                                 save_best_only=True
                                                )
 
-    return [chkpnt]
+    # save only the weights of the best model
+    chkpnt_wts_only =  tf.keras.callbacks.ModelCheckpoint(filepath=chkdir+'_weights_only',
+                                                save_weights_only=True,
+                                                monitor=monitor,
+                                                verbose=0,
+                                                mode='auto',
+                                                save_best_only=True
+                                               )
+
+
+    return [chkpnt,chkpnt_wts_only]
     
 
-def define_cnn(mltype,iptype,nnodex,nnodey,optimizer):
+def define_cnn(mltype,iptype,nnodex,nnodey,mubndmin,mubndmax,activation_arg,optimizer):
 
-    # shift function for activation of output
-    muboundmin = 1.0
-    muboundmax = 5.0
-
-    def shift_softplus(x):
-        return tf.constant(10.0)*tf.keras.backend.softplus(x) + tf.constant(1.0)
-
-    def shift_sigmoid(x):
-        return tf.constant(4.0)*tf.keras.backend.sigmoid(x) + tf.constant(1.0)
+    #def shift_sigmoid(x):
+    #    return tf.constant(4.0)*tf.keras.backend.sigmoid(x) + tf.constant(1.0)
 
     def shift_square_both(x):
-        return tf.keras.backend.minimum( x*x + tf.constant(1.0), tf.constant(5.0) )
+        return tf.keras.backend.minimum( x*x + tf.constant(mubndmin), tf.constant(mubndmax) )
+
+    def shift_softplus_both(x):
+        return tf.keras.backend.minimum( tf.keras.backend.softplus(x) + tf.constant(mubndmin), tf.constant(mubndmax) )
+
     
     # channels is the number of components of input fields
     # if we have 2 components of displacements then nchannel =2
@@ -78,12 +86,18 @@ def define_cnn(mltype,iptype,nnodex,nnodey,optimizer):
                   'value' :'mse',
                   'field' :'mse'
                   }
+    
     activation = {'binary':'sigmoid',
                   'center':'sigmoid',
                   'radius':'softplus',
                   'value' :'softplus',
-                  'field' :shift_square_both
+                  'field' :'softplus'
                   }
+
+    if ( activation_arg != 'softplus'):
+        # we're evaling arguments without checks ...bad security practice
+        activation['field'] = eval(activation_arg)
+    
     metrics    = {'binary':['accuracy'],
                   'center':[],
                   'radius':[],
@@ -185,7 +199,7 @@ def train_cnn(mltype,iptype,cnn,train_data,valid_data,epochs,callback_list):
         
     return (cnn,history)
 
-def load_or_train_and_plot_cnn(mltype,iptype,train_data,valid_data,nnodex,nnodey,epochs,optimizer,mode,outputdir):
+def load_or_train_and_plot_cnn(mltype,iptype,train_data,valid_data,nnodex,nnodey,mubndmin,mubndmax,epochs,activation,optimizer,mode,outputdir):
     
     model_dir          = outputdir+'/' + mltype+'_'+iptype+'_model'
     check_dir          = outputdir+'/' + mltype+'_'+iptype+'_check_model'
@@ -198,6 +212,7 @@ def load_or_train_and_plot_cnn(mltype,iptype,train_data,valid_data,nnodex,nnodey
     # if mode == 'train' check to see if previously saved model exists
     #        if so, continue training for 'nepochs'
     #        else,  define a new model from scratch and train it
+    
     if ( mode == 'checkpoint'):
         # we can get rid of this if branch and just return the best model after training
         print('-'*80,f'\n Loading checkpointed model for mltype={mltype} iptype={iptype}\n','-'*80,sep='')
@@ -222,10 +237,11 @@ def load_or_train_and_plot_cnn(mltype,iptype,train_data,valid_data,nnodex,nnodey
                 
         else:
             print('-'*80,f'\n Training model from scratch for mltype={mltype} iptype={iptype} \n','-'*80,sep='')
-            # print('WARNING: using cnn = define_cnn_value: Press any key to continue ')
-            # _ = input()
-                                    
-            cnn = define_cnn(mltype,iptype,nnodex,nnodey,optimizer)
+            cnn = define_cnn(mltype,iptype,nnodex,nnodey,mubndmin,mubndmax,activation,optimizer)
+            # check if better weights exist
+            if ( os.path.exists(check_dir+'_weights_only.data-00000-of-00001')):
+                 print('weights exist...loading weights')
+                 cnn.load_weights(check_dir+'_weights_only')
 
         cnn,new_history = train_cnn(mltype=mltype,
                                 iptype=iptype,
@@ -238,6 +254,7 @@ def load_or_train_and_plot_cnn(mltype,iptype,train_data,valid_data,nnodex,nnodey
         
 
         print(f'{__file__}: Done training')
+        
         
         if not old_history:
             # old_history is empty. we are not restarting from a saved model.
@@ -537,6 +554,7 @@ def post_process_cnn(mltype,iptype,noise,ntrain,nvalid,ntest,prediction,test_dat
  
         # nimg = test_data.labels.field.shape[0]
         os.system(f'rm {outputdir}/mucomp*.png')
+        os.system(f'rm {outputdir}/*.mp4')
         for ifield in range(nimg):
             print(f'plotting test example {ifield+1} out of {nimg}')
             mucorr = test_data.labels.field[ifield,:,:,1]
