@@ -48,8 +48,8 @@ def get_checkpoint(mltype,chkdir):
 
 def define_cnn(mltype,iptype,nnodex,nnodey,mubndmin,mubndmax,activation_arg,optimizer):
 
-    #def shift_sigmoid(x):
-    #    return tf.constant(4.0)*tf.keras.backend.sigmoid(x) + tf.constant(1.0)
+    def shift_sigmoid_both(x):
+        return tf.constant(mubndmax-1.0)*tf.keras.backend.sigmoid(x) + tf.constant(mubndmin)
 
     def shift_square_both(x):
         return tf.keras.backend.minimum( x*x + tf.constant(mubndmin), tf.constant(mubndmax) )
