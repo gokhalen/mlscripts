@@ -1,5 +1,6 @@
 import argparse
 import json
+import sys
 
 from   .config import mltypelist
 
@@ -49,7 +50,8 @@ def get_args():
 
     parser.add_argument('--activation',help='activation of output layer for mltype=field',
                         required=False,type=str,default='softplus',
-                        choices=['softplus','shift_square_both','shift_softplus_both','shift_sigmoid_both']
+                        choices=['softplus','sigmoid',
+                                 'shift_square_both','shift_softplus_both','shift_sigmoid_both']
                         )
 
     
@@ -72,6 +74,13 @@ def get_args():
                         required=False,type=float,
                         default=0.00
                        )
+
+
+    parser.add_argument('--featurescale',help='scale or not scale mu field',
+                        required=False,type=str,
+                        default='False',
+                        choices=['True','False']
+                        )
     
     args = parser.parse_args()
 
@@ -110,12 +119,17 @@ def update_params(params,args):
     newparams['mode']       = args.mode
     newparams['nimg']       = min(args.nimg,newparams['ntest'])
     newparams['noise']      = args.noise
-    
+    newparams['featurescale']  = args.featurescale
+
     if ( args.nimg > newparams['ntest']):
-        print(f'{__file__}: nimg > ntest ...setting nimg to ntest')
+        print(f'{__file__}: nimg > ntest ...setting nimg to ntest')  # the setting is done a few lines above
 
     newparams['outputdir'] = args.mltype+'_'+args.iptype+f'_noise_{args.noise}_output'
     if ( args.outputdir != None):
         newparams['outputdir'] = args.outputdir
+
+    if ((args.featurescale=='True') and (args.activation !='sigmoid')):
+        print(f'{__file__}:featurescale=True requires sigmoid activation only given {args.activation}')
+        sys.exit()
         
     return newparams

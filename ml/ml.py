@@ -1,5 +1,6 @@
 import logging
 import os
+import copy
 
 # Silence tf warnings and deprecation mesages
 # Must be before tf is imported
@@ -45,15 +46,13 @@ if __name__ =='__main__':
     noise      = newparams['noise']
     mubndmin   = newparams['muback']
     mubndmax   = newparams['mumax']
+    featurescale = newparams['featurescale']
 
 
     if ( not os.path.exists(outputdir)):
         os.mkdir(outputdir)
 
-    # feature scaling is applied to use prior knowledge about the data
-    # e.g. We know the max and min coordinates of the center
-    # so we can rescale them to be in (0.0,1.0)
-    
+    # this data is not scaled
     train_data,valid_data,test_data = get_data( ntrain=ntrain,
                                                 nvalid=nvalid,
                                                 ntest=ntest,
@@ -66,34 +65,19 @@ if __name__ =='__main__':
 
 
     # be careful here: addnoise modifies np arrays in test_data
-    test_data = addnoise(test_data,noise,nnodex,nnodey)
+    test_data  = addnoise(test_data,noise,nnodex,nnodey)
 
+    train_data_copy = copy.deepcopy(train_data)
 
-    tt = (train_data,valid_data,test_data)
-
-    valmin  = np.min(train_data.labels.value)
-    valmax  = np.max(train_data.labels.value)
-    valave  = np.mean(train_data.labels.value)
-
-    # skip scaling for mu value 
-    valmin = 0
-    valmax = 1
-    valave = 0
-
-    # vf = forward_scale_value(train_data.labels.value,valmin=valmin,valmax=valmax,valave=valave)
-    # vi = inverse_scale_value(vf,valmin=valmin,valmax=valmax,valave=valave)
-     
-    train_data_scaled,valid_data_scaled,test_data_scaled = forward_scale_all( datatuple=tt,
-                                                                              length=length,
-                                                                              breadth=breadth,
-                                                                              valmin=valmin,
-                                                                              valmax=valmax,
-                                                                              valave=valave
-                                                                             )
-
+    if ( featurescale == 'True'):
+        # mu is modified in place
+        forscale_linear_mu(xmin=mubndmin,xmax=mubndmax,data=train_data.labels.field[:,:,:,1])
+        forscale_linear_mu(xmin=mubndmin,xmax=mubndmax,data=valid_data.labels.field[:,:,:,1])
+        forscale_linear_mu(xmin=mubndmin,xmax=mubndmax,data=test_data.labels.field[:,:,:,1])
     
-    tt=(train_data_scaled,valid_data_scaled,test_data_scaled)
-
+    train_data_scaled = train_data
+    valid_data_scaled = valid_data
+    test_data_scaled  = test_data
 
     cnn = load_or_train_and_plot_cnn( mltype=mltype,
                                       iptype=iptype,
@@ -111,26 +95,19 @@ if __name__ =='__main__':
                                      )
 
     cnn_summary(cnn=cnn,mltype=mltype,iptype=iptype,outputdir=outputdir)
-
     
-    prediction = predict_cnn( mltype=mltype,
-                              iptype=iptype,
-                              cnn=cnn,
-                              test_data=test_data_scaled,
-                              nnodex=nnodex,
-                              nnodey=nnodey
-                             )
+    prediction_inv = predict_cnn( mltype=mltype,
+                                  iptype=iptype,
+                                  cnn=cnn,
+                                  test_data=test_data_scaled,
+                                  nnodex=nnodex,
+                                  nnodey=nnodey
+                                 )
+            
+    if ( featurescale == 'True'):
+        invscale_linear_mu(xmin=mubndmin,xmax=mubndmax,data=prediction_inv)
+        invscale_linear_mu(xmin=mubndmin,xmax=mubndmax,data=test_data_scaled.labels.field[:,:,:,1])
 
-    
-    prediction_inv = inverse_scale_prediction( mltype=mltype,
-                                               prediction=prediction,
-                                               length=length,
-                                               breadth=breadth,
-                                               valmin=valmin,
-                                               valmax=valmax,
-                                               valave=valave
-                                              )
-        
     save_prediction_test_data( mltype=mltype,
                                iptype=iptype,
                                noise=str(noise),
@@ -157,33 +134,6 @@ if __name__ =='__main__':
 
 
 
-    '''
-    (ti,vi,tsi) = inverse_scale_all(datatuple=tt,
-                                    length=length,
-                                    breadth=breadth,
-                                    valmin=valmin,
-                                    valmax=valmax,
-                                    valave=valave
-                                    )
-
-    print('train diff',np.linalg.norm(train_data.labels.binary-ti.labels.binary),
-          np.linalg.norm(train_data.labels.center-ti.labels.center),
-          np.linalg.norm(train_data.labels.radius-ti.labels.radius),
-          np.linalg.norm(train_data.labels.value-ti.labels.value),
-          )
-    
-    print('valid diff',np.linalg.norm(valid_data.labels.binary-vi.labels.binary),
-          np.linalg.norm(valid_data.labels.center-vi.labels.center),
-          np.linalg.norm(valid_data.labels.radius-vi.labels.radius),
-          np.linalg.norm(valid_data.labels.value-vi.labels.value),
-          )
-
-    print('test diff',np.linalg.norm(test_data.labels.binary-tsi.labels.binary),
-          np.linalg.norm(test_data.labels.center-tsi.labels.center),
-          np.linalg.norm(test_data.labels.radius-tsi.labels.radius),
-          np.linalg.norm(test_data.labels.value-tsi.labels.value),
-          )
-    '''
 
 
 

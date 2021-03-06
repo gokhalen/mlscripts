@@ -94,10 +94,12 @@ def define_cnn(mltype,iptype,nnodex,nnodey,mubndmin,mubndmax,activation_arg,opti
                   'field' :'softplus'
                   }
 
-    if ( activation_arg != 'softplus'):
-        # we're evaling arguments without checks ...bad security practice
+    # set the activation arg to either string or function
+    if (activation_arg not in ['sigmoid','softplus']):
         activation['field'] = eval(activation_arg)
-    
+    else:
+        activation['field'] = activation_arg
+
     metrics    = {'binary':['accuracy'],
                   'center':[],
                   'radius':[],

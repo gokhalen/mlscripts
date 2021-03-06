@@ -439,3 +439,16 @@ def inverse_scale_prediction(mltype,prediction,length,breadth,valmin,valmax,vala
 
     if (mltype == 'field'):
         return prediction
+
+
+def forscale_linear_mu(xmin,xmax,data):
+    # data is np.array of shape (?,nnodey,nnodex)
+    # data is modified in place
+    data[:,:,:] -= xmin
+    data[:,:,:] /= (xmax-xmin)
+
+def invscale_linear_mu(xmin,xmax,data):
+    # data is of np.array of shape (?,nnodey,nnodex)
+    data[:,:,:] *= (xmax-xmin)
+    data[:,:,:] += xmin
+
