@@ -51,7 +51,9 @@ def get_args():
     parser.add_argument('--activation',help='activation of output layer for mltype=field',
                         required=False,type=str,default='softplus',
                         choices=['softplus','sigmoid',
-                                 'shift_square_both','shift_softplus_both','shift_sigmoid_both']
+                                 'shift_square_both','shift_softplus_both','shift_sigmoid_both',
+                                 'shift_softplus_lower'
+                                 ]
                         )
 
     

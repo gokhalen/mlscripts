@@ -85,6 +85,19 @@ def normalize_input_cnndata(data,ntrain,nvalid,ntest):
     return cnndata_norm_input
 
 
+def normalize_input_cnndata_single(data,ntrain,nvalid,ntest):
+    # single denotes that a single factor is used to normalize data
+    # unlike normalize_input_data where each component of images and strain
+    # is scaled differently
+    # for incompressible elasticity exx+eyy ~ 0
+    # and ux and uy have about the same magnitude
+    # so normalize_input_cnndata effectively reduces to normalize_input_cnndata_single
+
+    umax = np.max(np.abs(data.images[0:ntrain,:,:,:]))
+    emax = np.max(np.abs(data.strain[0:ntrain,:,:,:]))
+    
+    # not implemented
+
 def get_data(ntrain,nvalid,ntest,nnodex,nnodey,prefix,outputdir,iptype):
     # reads training,validation and test data and returns it
     # select_input_comps and normalize_cnndata are called
@@ -441,13 +454,13 @@ def inverse_scale_prediction(mltype,prediction,length,breadth,valmin,valmax,vala
         return prediction
 
 
-def forscale_linear_mu(xmin,xmax,data):
+def forscale_linear(xmin,xmax,data):
     # data is np.array of shape (?,nnodey,nnodex)
     # data is modified in place
     data[:,:,:] -= xmin
     data[:,:,:] /= (xmax-xmin)
 
-def invscale_linear_mu(xmin,xmax,data):
+def invscale_linear(xmin,xmax,data):
     # data is of np.array of shape (?,nnodey,nnodex)
     data[:,:,:] *= (xmax-xmin)
     data[:,:,:] += xmin

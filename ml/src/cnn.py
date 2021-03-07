@@ -57,6 +57,9 @@ def define_cnn(mltype,iptype,nnodex,nnodey,mubndmin,mubndmax,activation_arg,opti
     def shift_softplus_both(x):
         return tf.keras.backend.minimum( tf.keras.backend.softplus(x) + tf.constant(mubndmin), tf.constant(mubndmax) )
 
+    def shift_softplus_lower(x):
+        return tf.keras.backend.softplus(x) + tf.constant(mubndmin)
+
     
     # channels is the number of components of input fields
     # if we have 2 components of displacements then nchannel =2

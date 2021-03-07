@@ -67,13 +67,12 @@ if __name__ =='__main__':
     # be careful here: addnoise modifies np arrays in test_data
     test_data  = addnoise(test_data,noise,nnodex,nnodey)
 
-    train_data_copy = copy.deepcopy(train_data)
-
     if ( featurescale == 'True'):
-        # mu is modified in place
-        forscale_linear_mu(xmin=mubndmin,xmax=mubndmax,data=train_data.labels.field[:,:,:,1])
-        forscale_linear_mu(xmin=mubndmin,xmax=mubndmax,data=valid_data.labels.field[:,:,:,1])
-        forscale_linear_mu(xmin=mubndmin,xmax=mubndmax,data=test_data.labels.field[:,:,:,1])
+        # labels.field is modified in place
+        # images and strains are normalized in get_data()
+        forscale_linear(xmin=mubndmin,xmax=mubndmax,data=train_data.labels.field[:,:,:,1])
+        forscale_linear(xmin=mubndmin,xmax=mubndmax,data=valid_data.labels.field[:,:,:,1])
+        forscale_linear(xmin=mubndmin,xmax=mubndmax,data=test_data.labels.field[:,:,:,1])
     
     train_data_scaled = train_data
     valid_data_scaled = valid_data
@@ -105,8 +104,8 @@ if __name__ =='__main__':
                                  )
             
     if ( featurescale == 'True'):
-        invscale_linear_mu(xmin=mubndmin,xmax=mubndmax,data=prediction_inv)
-        invscale_linear_mu(xmin=mubndmin,xmax=mubndmax,data=test_data_scaled.labels.field[:,:,:,1])
+        invscale_linear(xmin=mubndmin,xmax=mubndmax,data=prediction_inv)
+        invscale_linear(xmin=mubndmin,xmax=mubndmax,data=test_data_scaled.labels.field[:,:,:,1])
 
     save_prediction_test_data( mltype=mltype,
                                iptype=iptype,
