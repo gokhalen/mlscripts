@@ -465,3 +465,14 @@ def invscale_linear(xmin,xmax,data):
     data[:,:,:] *= (xmax-xmin)
     data[:,:,:] += xmin
 
+def forscale_p1m1(xmin,xmax,data):
+    data -= xmin
+    data /= (xmax-xmin)
+    data -= 0.5
+    data *= 2.0
+    
+def invscale_p1m1(xmin,xmax,data):
+    data /= 2.0
+    data += 0.5
+    data *=(xmax-xmin)
+    data += xmin

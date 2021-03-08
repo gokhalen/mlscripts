@@ -60,6 +60,11 @@ def define_cnn(mltype,iptype,nnodex,nnodey,mubndmin,mubndmax,activation_arg,opti
     def shift_softplus_lower(x):
         return tf.keras.backend.softplus(x) + tf.constant(mubndmin)
 
+    def sigmoid_symmetric(x):
+        return 2.0*(tf.keras.backend.sigmoid(x)-0.5)
+
+    def tanh_pert(x):
+        return tf.keras.backend.tanh(x) + tf.constant(0.01)*x
     
     # channels is the number of components of input fields
     # if we have 2 components of displacements then nchannel =2
@@ -98,7 +103,7 @@ def define_cnn(mltype,iptype,nnodex,nnodey,mubndmin,mubndmax,activation_arg,opti
                   }
 
     # set the activation arg to either string or function
-    if (activation_arg not in ['sigmoid','softplus']):
+    if (activation_arg not in ['sigmoid','softplus','tanh']):
         activation['field'] = eval(activation_arg)
     else:
         activation['field'] = activation_arg

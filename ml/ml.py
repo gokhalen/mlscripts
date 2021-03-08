@@ -70,9 +70,9 @@ if __name__ =='__main__':
     if ( featurescale == 'True'):
         # labels.field is modified in place
         # images and strains are normalized in get_data()
-        forscale_linear(xmin=mubndmin,xmax=mubndmax,data=train_data.labels.field[:,:,:,1])
-        forscale_linear(xmin=mubndmin,xmax=mubndmax,data=valid_data.labels.field[:,:,:,1])
-        forscale_linear(xmin=mubndmin,xmax=mubndmax,data=test_data.labels.field[:,:,:,1])
+        forscale_p1m1(xmin=mubndmin,xmax=mubndmax,data=train_data.labels.field[:,:,:,1])
+        forscale_p1m1(xmin=mubndmin,xmax=mubndmax,data=valid_data.labels.field[:,:,:,1])
+        forscale_p1m1(xmin=mubndmin,xmax=mubndmax,data=test_data.labels.field[:,:,:,1])
     
     train_data_scaled = train_data
     valid_data_scaled = valid_data
@@ -104,8 +104,8 @@ if __name__ =='__main__':
                                  )
             
     if ( featurescale == 'True'):
-        invscale_linear(xmin=mubndmin,xmax=mubndmax,data=prediction_inv)
-        invscale_linear(xmin=mubndmin,xmax=mubndmax,data=test_data_scaled.labels.field[:,:,:,1])
+        invscale_p1m1(xmin=mubndmin,xmax=mubndmax,data=prediction_inv)
+        invscale_p1m1(xmin=mubndmin,xmax=mubndmax,data=test_data_scaled.labels.field[:,:,:,1])
 
     save_prediction_test_data( mltype=mltype,
                                iptype=iptype,

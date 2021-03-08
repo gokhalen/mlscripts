@@ -2,7 +2,7 @@ import argparse
 import json
 import sys
 
-from   .config import mltypelist
+from .config import mltypelist
 
 def get_args():
     parser = argparse.ArgumentParser(description='Identification of inclusion parameters using ML\
@@ -52,7 +52,7 @@ def get_args():
                         required=False,type=str,default='softplus',
                         choices=['softplus','sigmoid',
                                  'shift_square_both','shift_softplus_both','shift_sigmoid_both',
-                                 'shift_softplus_lower'
+                                 'shift_softplus_lower','sigmoid_symmetric','tanh','tanh_pert'
                                  ]
                         )
 
@@ -130,8 +130,10 @@ def update_params(params,args):
     if ( args.outputdir != None):
         newparams['outputdir'] = args.outputdir
 
-    if ((args.featurescale=='True') and (args.activation !='sigmoid')):
-        print(f'{__file__}:featurescale=True requires sigmoid activation only given {args.activation}')
-        sys.exit()
+    
+    if (args.featurescale=='True'):
+        if (args.activation not in ['sigmoid','sigmoid_symmetric','tanh','tanh_pert']):
+            print(f'{__file__}:featurescale=True requires "sigmoid" or "sigmoid_symmetric" or "tanh" activation only given {args.activation}')
+            sys.exit()
         
     return newparams
