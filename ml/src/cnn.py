@@ -6,7 +6,7 @@ mpl.use('Agg')
 import matplotlib.pyplot as plt
 import sys
 import json
-import pickle
+# import pickle
 
 from sklearn.metrics import confusion_matrix, accuracy_score
 from .datastrc import *
@@ -320,9 +320,11 @@ def predict_cnn(mltype,iptype,cnn,test_data,nnodex,nnodey):
                  'strainyy':'strain',
                  'strainxxyy':'strain'
                 }
-
-    out = cnn.predict(eval(f'test_data.{data_dict[iptype]}'))
-
+    
+    inputobj = eval(f'test_data.{data_dict[iptype]}')
+    ntest    = inputobj.shape[0]
+    out      = cnn.predict(inputobj)
+                           
     if ( mltype == 'binary'):
         out = out > 0.5
         out = out.reshape((-1,))
@@ -337,7 +339,11 @@ def predict_cnn(mltype,iptype,cnn,test_data,nnodex,nnodey):
         out = out.reshape((-1,))
 
     if ( mltype == 'field'):
-        out = out.reshape((-1,nnodey,nnodex))
+        out    = out.reshape((-1,nnodey,nnodex))
+        print('-'*80)
+        print('Test set loss = ')
+        result = cnn.evaluate(x=inputobj,y=test_data.labels.field[...,1].reshape((ntest,-1)))
+        print('-'*80)
 
     return out
 
@@ -547,10 +553,6 @@ def post_process_cnn(mltype,iptype,noise,ntrain,nvalid,ntest,prediction,test_dat
         
 
     if (mltype =='field'):
-        normdiff  = np.linalg.norm(test_data.labels.field[:,:,:,1] - prediction)
-        test_size = prediction.shape[0]
-        test_mse  = np.linalg.norm(normdiff)**2.0 / (test_size*nnodex*nnodey)
-        print(f'{__file__}: test set mse = ',test_mse)
 
         minpred = np.min(prediction)
         print(f'{__file__}: min shear modulus = ',minpred)

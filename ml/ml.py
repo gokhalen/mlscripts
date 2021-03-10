@@ -102,6 +102,7 @@ if __name__ =='__main__':
                                   nnodex=nnodex,
                                   nnodey=nnodey
                                  )
+
             
     if ( featurescale == 'True'):
         invscale_p1m1(xmin=mubndmin,xmax=mubndmax,data=prediction_inv)
@@ -122,7 +123,7 @@ if __name__ =='__main__':
                                  nvalid=nvalid,
                                  ntest=ntest,
                                  prediction=prediction_inv,
-                                 test_data=test_data,
+                                 test_data=test_data_scaled,
                                  outputdir=outputdir,
                                  nnodex=nnodex,
                                  nnodey=nnodey,

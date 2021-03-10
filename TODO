@@ -1,7 +1,11 @@
+
 -1001) Do not remove files automatically. Check for all os.system calls
 -1000) Sanitize input args. Especially those which are going to evaled. e.g. --activation
+-999) Use the lessons learned on constrained prediction in determining stiffness parameters (esp value)
 -100) Post Process all data sets (ntrain,ntest,nvalid)
- 
+
+
+  
 
 -8) Look at other peoples' Network architectures
 -7) Learning rate
