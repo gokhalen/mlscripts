@@ -372,7 +372,6 @@ def addnoise(data,noise,nnodex,nnodey,plotbool=False):
         for idisp in range(nimages):
             noisemaker = np.random.uniform(1.0-noise,1.0+noise,size=(nnodey,nnodex))
             data.images[itest,:,:,idisp] *= noisemaker
-
             if ( itest == (ntest-1)):
                 clean = data.images[-1,:,:,-1] / noisemaker
                 noisy = data.images[-1,:,:,-1]

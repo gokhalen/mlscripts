@@ -1,4 +1,3 @@
--2000) When retraining initialize best value of the checkpointed model correctly
 -1001) Do not remove files automatically. Check for all os.system calls
 -1000) Sanitize input args. Especially those which are going to evaled. e.g. --activation
 -999) Use the lessons learned on constrained prediction in determining stiffness parameters (esp value)
