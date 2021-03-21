@@ -1,0 +1,1 @@
+python3.8 ../../github/mlscripts/ml/ml.py --mltype=field --iptype=imagesy --nepochs=384 --mode=train --nimg=800 --noise=0.0 --activation=tanh_pert --featurescale=True

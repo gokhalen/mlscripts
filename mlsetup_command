@@ -1,0 +1,1 @@
+python3.8 ../../github/mlscripts/mlsetup/mlsetup.py --ntrain=1024 --nhomo=300 --generate=True --solve=True --nelemx=64 --nelemy=96 --shift=0 --length=1.0 --breadth=1.5 --eltype='linelas2dnumbasri'
