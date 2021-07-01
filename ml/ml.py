@@ -93,7 +93,7 @@ if __name__ =='__main__':
                                       outputdir=outputdir
                                      )
 
-    cnn_summary(cnn=cnn,mltype=mltype,iptype=iptype,outputdir=outputdir)
+    cnn_summary(cnn=cnn,mltype=mltype,iptype=iptype,noise=noise,outputdir=outputdir)
     
     prediction_inv = predict_cnn( mltype=mltype,
                                   iptype=iptype,

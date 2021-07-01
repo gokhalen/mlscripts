@@ -52,7 +52,7 @@ def get_args():
                         required=False,type=str,default='softplus',
                         choices=['softplus','sigmoid',
                                  'shift_square_both','shift_softplus_both','shift_sigmoid_both',
-                                 'shift_softplus_lower','sigmoid_symmetric','tanh','tanh_pert'
+                                 'shift_softplus_lower','sigmoid_symmetric','tanh','twisted_tanh'
                                  ]
                         )
 
@@ -132,8 +132,8 @@ def update_params(params,args):
 
     
     if (args.featurescale=='True'):
-        if (args.activation not in ['sigmoid','sigmoid_symmetric','tanh','tanh_pert']):
-            print(f'{__file__}:featurescale=True requires "sigmoid" or "sigmoid_symmetric" or "tanh" activation only given {args.activation}')
+        if (args.activation not in ['sigmoid','sigmoid_symmetric','tanh','twisted_tanh']):
+            print(f'{__file__}:featurescale=True requires "sigmoid" or "sigmoid_symmetric" or "twisted_tanh" activation only. You specified: {args.activation}')
             sys.exit()
         
     return newparams

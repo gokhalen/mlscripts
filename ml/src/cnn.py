@@ -63,7 +63,7 @@ def define_cnn(mltype,iptype,nnodex,nnodey,mubndmin,mubndmax,activation_arg,opti
     def sigmoid_symmetric(x):
         return 2.0*(tf.keras.backend.sigmoid(x)-0.5)
 
-    def tanh_pert(x):
+    def twisted_tanh(x):
         return tf.keras.backend.tanh(x) + tf.constant(0.01)*x
     
     # channels is the number of components of input fields
@@ -217,7 +217,7 @@ def load_or_train_and_plot_cnn(mltype,iptype,train_data,valid_data,nnodex,nnodey
     best_callback_file = outputdir+'/' + mltype+'_'+iptype+'_best_callback.json' 
 
     callback_list = get_checkpoint(mltype=mltype,chkdir=check_dir)
-    
+
     # if mode == 'checkpoint' the load checkpointed model
     # if mode == 'train' check to see if previously saved model exists
     #        if so, continue training for 'nepochs'
@@ -284,6 +284,7 @@ def load_or_train_and_plot_cnn(mltype,iptype,train_data,valid_data,nnodex,nnodey
         
         plotall_and_save(mltype=mltype,
                          iptype=iptype,
+                         activation=activation,
                          history=history_sum,
                          outputdir=outputdir)
 
@@ -378,11 +379,11 @@ def post_process_cnn(mltype,iptype,noise,ntrain,nvalid,ntest,prediction,test_dat
     binary_out = None ;    center_out = None;    radius_out = None
     value_out  = None ;    field_out  = None;
 
-    logfile = outputdir+'/'+mltype+'_'+iptype+'_logfile.txt'
+    logfile = outputdir+'/'+mltype+'_'+iptype+'_noise_'+str(noise)+'_logfile.txt'
 
     # need to delete logfile if exists, because we're appending to it
-    if ( os.path.exists(logfile) ):
-        os.remove(logfile)
+    # if ( os.path.exists(logfile) ):
+    #   os.remove(logfile)
         
     percen = [0.05,0.10,0.15,0.2,0.25,0.3,0.35]
     
@@ -563,6 +564,9 @@ def post_process_cnn(mltype,iptype,noise,ntrain,nvalid,ntest,prediction,test_dat
 
         # figure out how many zeros to pad
         nzfill = len(str(nimg))
+
+        # JSON structure for output
+        json_out = {}
  
         # nimg = test_data.labels.field.shape[0]
         os.system(f'rm {outputdir}/mucomp*.png')
@@ -582,7 +586,18 @@ def post_process_cnn(mltype,iptype,noise,ntrain,nvalid,ntest,prediction,test_dat
         os.system(f'ffmpeg.exe -r 4 -i mucomp%0{nzfill}d.png -c:v libx264 -crf 0 {mltype}_{iptype}_noise_{noise}_movie_hires.mp4')
         # hi-res: ffmpeg.exe -r 4 -i mucomp%03d.png -c:v libx264 -crf 0 output.mp4
         # source: https://superuser.com/questions/1429256/producing-lossless-video-from-set-of-png-images-using-ffmpeg
+
+        # write the scaled norm of the error
+        # really should dump all output in JSON format ...makes things scriptable
+        scaled_norm_error = np.linalg.norm(test_data.labels.field[:,:,:,1]-prediction)/nimg
+        json_out['scaled_norm_error'] = scaled_norm_error
+
+        os.chdir('..')
+        with open(logfile,'w') as fout:
+            json.dump(json_out,fout)
         
+        
+            
             
     # this isn't really necessary, we're not doing anything with the
     # output of this post_process_cnn
@@ -597,9 +612,9 @@ def post_process_cnn(mltype,iptype,noise,ntrain,nvalid,ntest,prediction,test_dat
 
 
 
-def cnn_summary(cnn,mltype,iptype,outputdir):
+def cnn_summary(cnn,mltype,iptype,noise,outputdir):
 #   https://stackoverflow.com/questions/41665799/keras-model-summary-object-to-string
-    summary_filename = mltype+'_'+iptype+'_summary.txt'
+    summary_filename = mltype+'_'+iptype+'_noise_'+str(noise)+'_summary.txt'
     with open(f'{outputdir}/{summary_filename}','w') as fout:
         cnn.summary(print_fn=lambda x:fout.write(x+'\n'))
 
