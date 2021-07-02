@@ -27,26 +27,27 @@ if __name__ =='__main__':
     newparams = update_params(params=params,args=args) # override parameters in params with those in args
 
     # should be able to put these variables into the local variable dictionary programmatically
-    ntrain     = newparams['ntrain']
-    nvalid     = newparams['nvalid']
-    ntest      = newparams['ntest']
-    nnodex     = newparams['nelemx']+1;
-    nnodey     = newparams['nelemy']+1;
-    mltype     = newparams['mltype']
-    iptype     = newparams['iptype']
-    epochs     = newparams['nepochs']
-    prefix     = newparams['prefix']
-    length     = newparams['length']
-    breadth    = newparams['breadth']
-    optimizer  = newparams['optimizer']
-    activation = newparams['activation']
-    mode       = newparams['mode']
-    outputdir  = newparams['outputdir']
-    nimg       = newparams['nimg']
-    noise      = newparams['noise']
-    mubndmin   = newparams['muback']
-    mubndmax   = newparams['mumax']
+    ntrain       = newparams['ntrain']
+    nvalid       = newparams['nvalid']
+    ntest        = newparams['ntest']
+    nnodex       = newparams['nelemx']+1;
+    nnodey       = newparams['nelemy']+1;
+    mltype       = newparams['mltype']
+    iptype       = newparams['iptype']
+    epochs       = newparams['nepochs']
+    prefix       = newparams['prefix']
+    length       = newparams['length']
+    breadth      = newparams['breadth']
+    optimizer    = newparams['optimizer']
+    activation   = newparams['activation']
+    mode         = newparams['mode']
+    outputdir    = newparams['outputdir']
+    nimg         = newparams['nimg']
+    noise        = newparams['noise']
+    mubndmin     = newparams['muback']
+    mubndmax     = newparams['mumax']
     featurescale = newparams['featurescale']
+    inputscale   = newparams['inputscale'] 
 
 
     if ( not os.path.exists(outputdir)):
@@ -58,6 +59,7 @@ if __name__ =='__main__':
                                                 ntest=ntest,
                                                 nnodex=nnodex,
                                                 nnodey=nnodey,
+                                                inputscale=inputscale,
                                                 prefix=prefix,
                                                 outputdir=outputdir,
                                                 iptype=iptype

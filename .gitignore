@@ -5,6 +5,7 @@ __pycache__/
 
 # Emacs backup files
 *~*
+*#*
 
 # image files
 *.png

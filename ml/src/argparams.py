@@ -1,6 +1,7 @@
 import argparse
 import json
 import sys
+import os
 
 from .config import mltypelist
 
@@ -83,6 +84,13 @@ def get_args():
                         default='False',
                         choices=['True','False']
                         )
+
+    # choose whether to scale all channels in the image by a single constant
+    # or scale each channel individually
+    parser.add_argument('--inputscale',help='choose scaling for strain/displacement',
+                        required=True,type=str,
+                        choices=['global','individual']
+                        )
     
     args = parser.parse_args()
 
@@ -113,15 +121,16 @@ def update_params(params,args):
     if (args.ntrain != None) or (args.nvalid !=None) or (args.ntest != None):
         newparams['ntotal'] = newparams['ntrain'] + newparams['nvalid'] + newparams['ntest']
 
-    newparams['mltype']     = args.mltype
-    newparams['nepochs']    = args.nepochs
-    newparams['optimizer']  = args.optimizer
-    newparams['activation'] = args.activation
-    newparams['iptype']     = args.iptype
-    newparams['mode']       = args.mode
-    newparams['nimg']       = min(args.nimg,newparams['ntest'])
-    newparams['noise']      = args.noise
+    newparams['mltype']        = args.mltype     
+    newparams['nepochs']       = args.nepochs    
+    newparams['optimizer']     = args.optimizer  
+    newparams['activation']    = args.activation 
+    newparams['iptype']        = args.iptype     
+    newparams['mode']          = args.mode       
+    newparams['nimg']          = min(args.nimg,newparams['ntest'])
+    newparams['noise']         = args.noise
     newparams['featurescale']  = args.featurescale
+    newparams['inputscale']    = args.inputscale
 
     if ( args.nimg > newparams['ntest']):
         print(f'{__file__}: nimg > ntest ...setting nimg to ntest')  # the setting is done a few lines above
@@ -130,10 +139,16 @@ def update_params(params,args):
     if ( args.outputdir != None):
         newparams['outputdir'] = args.outputdir
 
-    
     if (args.featurescale=='True'):
         if (args.activation not in ['sigmoid','sigmoid_symmetric','tanh','twisted_tanh']):
             print(f'{__file__}:featurescale=True requires "sigmoid" or "sigmoid_symmetric" or "twisted_tanh" activation only. You specified: {args.activation}')
             sys.exit()
+
+
+    if ( not os.path.exists(newparams['outputdir'])):
+        os.mkdir(newparams['outputdir'])
+
+    with open(f"{newparams['outputdir']}/config.out",'w') as fout:
+        json.dump(newparams,fout)
         
     return newparams

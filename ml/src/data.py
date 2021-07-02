@@ -8,8 +8,18 @@ from .datastrc import *
 from .plotting import *
 from .config   import mltypelist
 
-from sklearn.preprocessing import StandardScaler
+# from sklearn.preprocessing import StandardScaler
 
+def get_max_abs_scaled_array(arr,ntrain):
+    # typical input arr is a 4D array
+    # scales each arr[...,i] by np.max(np.abs[0:ntrain,...,i])
+    nc    = arr.shape[-1]
+    alist = []
+    for ic in range(nc):
+        _max = np.max(np.abs(arr[0:ntrain,...,ic]))
+        _arr = arr[...,ic]/_max
+        alist.append(_arr)
+    return np.stack(alist,axis=-1)
 
 def select_input_comps(data,iptype):
     # data - namedtuple of type cnndata
@@ -54,28 +64,22 @@ def split_cnndata(cnndata,start,stop):
                      labels=labels)
     return out
 
-
-def normalize_input_cnndata(data,ntrain,nvalid,ntest):
-    # should be called before select_input_comps
+def normalize_input_cnndata(data,ntrain,nvalid,ntest,inputscale):
+    # should be called after select_input_comps
+    # this does not modify data. maybe it should. it would save memory
     # note: normalization parameters are computed over training images only
-    
-    uxmax  = np.max(np.abs(data.images[0:ntrain,:,:,0]))
-    uxnorm = data.images[:,:,:,0]/uxmax
-    
-    uymax  = np.max(np.abs(data.images[0:ntrain,:,:,1]))
-    uynorm = data.images[:,:,:,1]/uymax
 
-    new_images = np.stack((uxnorm,uynorm),axis=-1)
+    if (inputscale == 'global'):
+        # find the maximum of data.images and data.strain and scale by them
+        umax = np.max(np.abs(data.images[0:ntrain,...]))
+        emax = np.max(np.abs(data.strain[0:ntrain,...]))
+        new_images = data.images/umax
+        new_strain = data.strain/emax
 
-    exxmax = np.max(np.abs(data.strain[0:ntrain,:,:,0]))
-    eyymax = np.max(np.abs(data.strain[0:ntrain,:,:,1]))
-    exymax = np.max(np.abs(data.strain[0:ntrain,:,:,2]))
+    if (inputscale == 'individual'):
+        new_images = get_max_abs_scaled_array(data.images,ntrain=ntrain)
+        new_strain = get_max_abs_scaled_array(data.strain,ntrain=ntrain) 
 
-    exxnorm = data.strain[:,:,:,0]/exxmax
-    eyynorm = data.strain[:,:,:,1]/eyymax
-    exynorm = data.strain[:,:,:,2]/exymax
-
-    new_strain = np.stack((exxnorm,eyynorm,exynorm),axis=-1)
 
     cnndata_norm_input = CNNData(images=new_images,
                                  strain=new_strain,
@@ -85,20 +89,7 @@ def normalize_input_cnndata(data,ntrain,nvalid,ntest):
     return cnndata_norm_input
 
 
-def normalize_input_cnndata_single(data,ntrain,nvalid,ntest):
-    # single denotes that a single factor is used to normalize data
-    # unlike normalize_input_data where each component of images and strain
-    # is scaled differently
-    # for incompressible elasticity exx+eyy ~ 0
-    # and ux and uy have about the same magnitude
-    # so normalize_input_cnndata effectively reduces to normalize_input_cnndata_single
-
-    umax = np.max(np.abs(data.images[0:ntrain,:,:,:]))
-    emax = np.max(np.abs(data.strain[0:ntrain,:,:,:]))
-    
-    # not implemented
-
-def get_data(ntrain,nvalid,ntest,nnodex,nnodey,prefix,outputdir,iptype):
+def get_data(ntrain,nvalid,ntest,nnodex,nnodey,inputscale,prefix,outputdir,iptype):
     # reads training,validation and test data and returns it
     # select_input_comps and normalize_cnndata are called
     # strain and image are normalized
@@ -181,9 +172,10 @@ def get_data(ntrain,nvalid,ntest,nnodex,nnodey,prefix,outputdir,iptype):
         np.save('coord',coord)
 
         
-    # normalize data first
-    full_data  = normalize_input_cnndata(data=full_data,ntrain=ntrain,nvalid=nvalid,ntest=ntest)
-    full_data  = select_input_comps(data=full_data,iptype=iptype)
+    # first select, then normalize
+    full_data  = select_input_comps(data=full_data,iptype=iptype)    
+    full_data  = normalize_input_cnndata(data=full_data,ntrain=ntrain,nvalid=nvalid,ntest=ntest,inputscale=inputscale)
+    
     train_data = split_cnndata(full_data,0,ntrain)
     valid_data = split_cnndata(full_data,ntrain,ntrain+nvalid)
     test_data  = split_cnndata(full_data,ntrain+nvalid,nsum)
@@ -475,3 +467,51 @@ def invscale_p1m1(xmin,xmax,data):
     data += 0.5
     data *=(xmax-xmin)
     data += xmin
+
+
+'''
+def normalize_input_cnndata_old(data,ntrain,nvalid,ntest):
+    # should be called before select_input_comps
+    # note: normalization parameters are computed over training images only
+    
+    uxmax  = np.max(np.abs(data.images[0:ntrain,:,:,0]))
+    uxnorm = data.images[:,:,:,0]/uxmax
+    
+    uymax  = np.max(np.abs(data.images[0:ntrain,:,:,1]))
+    uynorm = data.images[:,:,:,1]/uymax
+
+    new_images = np.stack((uxnorm,uynorm),axis=-1)
+
+    exxmax = np.max(np.abs(data.strain[0:ntrain,:,:,0]))
+    eyymax = np.max(np.abs(data.strain[0:ntrain,:,:,1]))
+    exymax = np.max(np.abs(data.strain[0:ntrain,:,:,2]))
+
+    exxnorm = data.strain[:,:,:,0]/exxmax
+    eyynorm = data.strain[:,:,:,1]/eyymax
+    exynorm = data.strain[:,:,:,2]/exymax
+
+    new_strain = np.stack((exxnorm,eyynorm,exynorm),axis=-1)
+
+    cnndata_norm_input = CNNData(images=new_images,
+                                 strain=new_strain,
+                                 labels=data.labels
+                                )
+    
+    return cnndata_norm_input
+
+'''
+
+'''
+def normalize_input_cnndata_single(data,ntrain,nvalid,ntest):
+    # single denotes that a single factor is used to normalize data
+    # unlike normalize_input_data where each component of images and strain
+    # is scaled differently
+    # for incompressible elasticity exx+eyy ~ 0
+    # and ux and uy have about the same magnitude
+    # so normalize_input_cnndata effectively reduces to normalize_input_cnndata_single
+
+    umax = np.max(np.abs(data.images[0:ntrain,:,:,:]))
+    emax = np.max(np.abs(data.strain[0:ntrain,:,:,:]))
+    
+    # not implemented
+'''
