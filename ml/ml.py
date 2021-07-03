@@ -59,15 +59,15 @@ if __name__ =='__main__':
                                                 ntest=ntest,
                                                 nnodex=nnodex,
                                                 nnodey=nnodey,
+                                                noise=noise,
                                                 inputscale=inputscale,
                                                 prefix=prefix,
                                                 outputdir=outputdir,
                                                 iptype=iptype
                                                )
 
-
     # be careful here: addnoise modifies np arrays in test_data
-    test_data  = addnoise(test_data,noise,nnodex,nnodey)
+    # test_data  = addnoise(test_data,noise,nnodex,nnodey)
 
     if ( featurescale == 'True'):
         # labels.field is modified in place

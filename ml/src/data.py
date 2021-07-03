@@ -3,6 +3,7 @@ import json
 import glob
 import os
 import sys
+# import copy
 
 from .datastrc import *
 from .plotting import *
@@ -26,9 +27,10 @@ def select_input_comps(data,iptype):
     # depending on iptype we modify data.images and data.strain
     # there is a case for using default dict here
     # the default returned object would be data.images and data.strain
-    
+
+    # we are doing 0:1 instead of just 0 so that the 4D shape is retained    
     images_dict = {'images':data.images,
-                  'imagesx':data.images[...,0:1],
+                  'imagesx':data.images[...,0:1],    
                   'imagesy':data.images[...,1:2],
                   'strain':data.images,
                   'strainxx':data.images,
@@ -89,7 +91,7 @@ def normalize_input_cnndata(data,ntrain,nvalid,ntest,inputscale):
     return cnndata_norm_input
 
 
-def get_data(ntrain,nvalid,ntest,nnodex,nnodey,inputscale,prefix,outputdir,iptype):
+def get_data(ntrain,nvalid,ntest,nnodex,nnodey,noise,inputscale,prefix,outputdir,iptype):
     # reads training,validation and test data and returns it
     # select_input_comps and normalize_cnndata are called
     # strain and image are normalized
@@ -171,10 +173,20 @@ def get_data(ntrain,nvalid,ntest,nnodex,nnodey,inputscale,prefix,outputdir,iptyp
         np.save('field', full_data.labels.field)
         np.save('coord',coord)
 
-        
-    # first select, then normalize
-    full_data  = select_input_comps(data=full_data,iptype=iptype)    
+
+    # first select, then add noise to test examples, then normalize
+    full_data  = select_input_comps(data=full_data,iptype=iptype)
+    
+    # full_data_copy = copy.deepcopy(full_data)
+    full_data  = addnoise(data=full_data,noise=noise,ntrain=ntrain,nvalid=nvalid,ntest=ntest,nnodex=nnodex,nnodey=nnodey)
+    #print('no noise images= ',np.linalg.norm(full_data.images[0:ntrain+nvalid,...]-full_data_copy.images[0:ntrain+nvalid,...]))
+    #print('noise images= ',np.linalg.norm(full_data.images[ntrain+nvalid:,...]-full_data_copy.images[ntrain+nvalid:,...]))
+    #print('no noise strain= ',np.linalg.norm(full_data.strain[0:ntrain+nvalid,...]-full_data_copy.strain[0:ntrain+nvalid,...]))
+    #print('noise strain= ',np.linalg.norm(full_data.strain[ntrain+nvalid:,...]-full_data_copy.strain[ntrain+nvalid:,...]))
+    
     full_data  = normalize_input_cnndata(data=full_data,ntrain=ntrain,nvalid=nvalid,ntest=ntest,inputscale=inputscale)
+
+
     
     train_data = split_cnndata(full_data,0,ntrain)
     valid_data = split_cnndata(full_data,ntrain,ntrain+nvalid)
@@ -324,7 +336,7 @@ def inverse_scale_all(datatuple,length,breadth,valmin,valmax,valave):
     return tuple(ll)
 
 
-def addnoise(data,noise,nnodex,nnodey,plotbool=False):
+def addnoise(data,noise,ntrain,nvalid,ntest,nnodex,nnodey):
     # be careful here: addnoise modifies np arrays in data and returns data
     # addnoise can be applied on test data before or after normalization
     # this is because the normalization factor is computed on the training data
@@ -337,23 +349,25 @@ def addnoise(data,noise,nnodex,nnodey,plotbool=False):
     
     print('-'*80,f'\n Adding {noise} noise\n','-'*80,sep='')
 
-    ntest   = data.strain.shape[0]
     nstrain = data.strain.shape[-1]    # number of strain components: see select_input_comps
     nimages = data.images.shape[-1]    # number of displacement components: see select_input_comps
     
     nfactor = np.random.uniform(1-noise,1+noise)
-    # nmaker  = np.empty(cstrain.shape,dtype='float64')
 
-    for itest in range(ntest):
+    # add noise only to test data
+    # breakpoint()
+    for itest in range(ntrain+nvalid,ntrain+nvalid+ntest):
 
         for istrain in range(nstrain):
             noisemaker = np.random.uniform(1.0-noise,1.0+noise,size=(nnodey,nnodex))
             data.strain[itest,:,:,istrain] *= noisemaker
-            # nmaker[itest,:,:,istrain]       = noisemaker
-            if (itest == (ntest-1)):
+
+            if (itest == (ntrain+nvalid+ntest-1)):
                 # print snr for last strain/disp image
-                clean  = data.strain[-1,:,:,-1] / noisemaker
-                noisy  = data.strain[-1,:,:,-1] 
+                # noisemaker is not 0 anywhere because it should be in range (1-noise,1+noise) and (0<noise<1)
+                # so we can divide by noisemaker without fear
+                clean  = data.strain[-1,:,:,istrain] / noisemaker  
+                noisy  = data.strain[-1,:,:,istrain] 
                 noisepercen = np.linalg.norm(noisy - clean) / np.linalg.norm(noisy)
                 if ( noisepercen != 0.0):
                     snrdb  = 20*np.log10(1.0/noisepercen)
@@ -364,16 +378,22 @@ def addnoise(data,noise,nnodex,nnodey,plotbool=False):
         for idisp in range(nimages):
             noisemaker = np.random.uniform(1.0-noise,1.0+noise,size=(nnodey,nnodex))
             data.images[itest,:,:,idisp] *= noisemaker
-            if ( itest == (ntest-1)):
-                clean = data.images[-1,:,:,-1] / noisemaker
-                noisy = data.images[-1,:,:,-1]
+            if ( itest == (ntrain+nvalid+ntest-1)):
+                # print snr for last strain/disp image                
+                clean = data.images[-1,:,:,idisp] / noisemaker
+                noisy = data.images[-1,:,:,idisp]
                 noisepercen = np.linalg.norm(noisy - clean) / np.linalg.norm(noisy)
+
+                print('norm noisy= ',np.linalg.norm(noisy))
+                print('norm clean= ',np.linalg.norm(clean))
+                
                 if ( noisepercen != 0.0):
                     snrdb  = 20*np.log10(1.0/noisepercen)
                     print('snr in dB in disp ==',snrdb)
 
                 else:
                     print('no noise in disp')
+
 
     newdata = data
 
@@ -514,4 +534,63 @@ def normalize_input_cnndata_single(data,ntrain,nvalid,ntest):
     emax = np.max(np.abs(data.strain[0:ntrain,:,:,:]))
     
     # not implemented
+
+'''
+
+'''
+def addnoise_old(data,noise,nnodex,nnodey):
+    # be careful here: addnoise modifies np arrays in data and returns data
+    # addnoise can be applied on test data before or after normalization
+    # this is because the normalization factor is computed on the training data
+    # if the normalization factor was being computed on the test_data, then
+    # things would be different.
+    
+    # data : CNNData Tuple
+    # noise: noise factor
+    # plotbool: decide whether or not to plot data
+    
+    print('-'*80,f'\n Adding {noise} noise\n','-'*80,sep='')
+
+    ntest   = data.strain.shape[0]
+    nstrain = data.strain.shape[-1]    # number of strain components: see select_input_comps
+    nimages = data.images.shape[-1]    # number of displacement components: see select_input_comps
+    
+    nfactor = np.random.uniform(1-noise,1+noise)
+    # nmaker  = np.empty(cstrain.shape,dtype='float64')
+
+    for itest in range(ntest):
+
+        for istrain in range(nstrain):
+            noisemaker = np.random.uniform(1.0-noise,1.0+noise,size=(nnodey,nnodex))
+            data.strain[itest,:,:,istrain] *= noisemaker
+            # nmaker[itest,:,:,istrain]       = noisemaker
+            if (itest == (ntest-1)):
+                # print snr for last strain/disp image
+                clean  = data.strain[-1,:,:,-1] / noisemaker
+                noisy  = data.strain[-1,:,:,-1] 
+                noisepercen = np.linalg.norm(noisy - clean) / np.linalg.norm(noisy)
+                if ( noisepercen != 0.0):
+                    snrdb  = 20*np.log10(1.0/noisepercen)
+                    print('snr in dB in strain ==',snrdb)
+                else:
+                    print('no noise in strain')
+
+        for idisp in range(nimages):
+            noisemaker = np.random.uniform(1.0-noise,1.0+noise,size=(nnodey,nnodex))
+            data.images[itest,:,:,idisp] *= noisemaker
+            if ( itest == (ntest-1)):
+                # print snr for last strain/disp image                
+                clean = data.images[-1,:,:,-1] / noisemaker
+                noisy = data.images[-1,:,:,-1]
+                noisepercen = np.linalg.norm(noisy - clean) / np.linalg.norm(noisy)
+                if ( noisepercen != 0.0):
+                    snrdb  = 20*np.log10(1.0/noisepercen)
+                    print('snr in dB in disp ==',snrdb)
+
+                else:
+                    print('no noise in disp')
+
+    newdata = data
+
+    return newdata
 '''

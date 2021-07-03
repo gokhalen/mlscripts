@@ -94,7 +94,7 @@ def get_args():
     
     args = parser.parse_args()
 
-    assert ( 0.0 <= args.noise < 1.0 ), 'args.noise not in range [0,1)'
+    assert ( 0.0 <= args.noise < 1.0 ), 'args.noise not in range [0,1), required for division by noisemaker to work'
     
     return args
 
