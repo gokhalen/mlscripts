@@ -588,16 +588,13 @@ def post_process_cnn(mltype,iptype,noise,ntrain,nvalid,ntest,prediction,test_dat
         # source: https://superuser.com/questions/1429256/producing-lossless-video-from-set-of-png-images-using-ffmpeg
 
         # write the scaled norm of the error
-        # really should dump all output in JSON format ...makes things scriptable
-        scaled_norm_error = np.linalg.norm(test_data.labels.field[:,:,:,1]-prediction)/nimg
+        # Even if the user specifies nimg, scaled_norm_error is calculated over all test images
+        scaled_norm_error = np.linalg.norm(test_data.labels.field[:,:,:,1]-prediction)/prediction.shape[0]
         json_out['scaled_norm_error'] = scaled_norm_error
 
         os.chdir('..')
         with open(logfile,'w') as fout:
             json.dump(json_out,fout)
-        
-        
-            
             
     # this isn't really necessary, we're not doing anything with the
     # output of this post_process_cnn

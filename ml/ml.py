@@ -44,6 +44,7 @@ if __name__ =='__main__':
     outputdir    = newparams['outputdir']
     nimg         = newparams['nimg']
     noise        = newparams['noise']
+    noisetype    = newparams['noisetype']
     mubndmin     = newparams['muback']
     mubndmax     = newparams['mumax']
     featurescale = newparams['featurescale']
@@ -60,6 +61,7 @@ if __name__ =='__main__':
                                                 nnodex=nnodex,
                                                 nnodey=nnodey,
                                                 noise=noise,
+                                                noisetype=noisetype,
                                                 inputscale=inputscale,
                                                 prefix=prefix,
                                                 outputdir=outputdir,

@@ -78,6 +78,13 @@ def get_args():
                         default=0.00
                        )
 
+    parser.add_argument('--noisetype',help='Additive or multiplicative noise',
+                        required=True,type=str,
+                        default='add',
+                        choices=['add','mult']
+                        )
+                        
+
 
     parser.add_argument('--featurescale',help='scale or not scale mu field',
                         required=False,type=str,
@@ -94,7 +101,7 @@ def get_args():
     
     args = parser.parse_args()
 
-    assert ( 0.0 <= args.noise < 1.0 ), 'args.noise not in range [0,1), required for division by noisemaker to work'
+    # assert ( 0.0 <= args.noise < 1.0 ), 'args.noise not in range [0,1), required for division by noisemaker to work'
     
     return args
 
@@ -129,6 +136,7 @@ def update_params(params,args):
     newparams['mode']          = args.mode       
     newparams['nimg']          = min(args.nimg,newparams['ntest'])
     newparams['noise']         = args.noise
+    newparams['noisetype']     = args.noisetype
     newparams['featurescale']  = args.featurescale
     newparams['inputscale']    = args.inputscale
 
