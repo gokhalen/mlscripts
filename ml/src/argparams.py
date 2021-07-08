@@ -81,7 +81,7 @@ def get_args():
     parser.add_argument('--noisetype',help='Additive or multiplicative noise',
                         required=True,type=str,
                         default='add',
-                        choices=['add','mult']
+                        choices=['add','mult','none']
                         )
                         
 
@@ -98,6 +98,15 @@ def get_args():
                         required=True,type=str,
                         choices=['global','individual']
                         )
+
+
+    # Add a comment
+    parser.add_argument('--comment',help='a comment that is tagged on to the directory name',
+                        required=False,type=str,
+                        default=''
+                       )
+                        
+
     
     args = parser.parse_args()
 
@@ -140,10 +149,19 @@ def update_params(params,args):
     newparams['featurescale']  = args.featurescale
     newparams['inputscale']    = args.inputscale
 
+    # create noiseid
+    if (args.noisetype == 'add'):
+        newparams['noiseid']='add'+str(args.noise)
+    elif (args.noisetype=='mult'):
+        newparams['noiseid']='mult'+str(args.noise)
+    else:
+        newparams['noiseid']='none'
+        
+
     if ( args.nimg > newparams['ntest']):
         print(f'{__file__}: nimg > ntest ...setting nimg to ntest')  # the setting is done a few lines above
 
-    newparams['outputdir'] = args.mltype+'_'+args.iptype+f'_noise_{args.noise}_output'
+    newparams['outputdir'] = args.mltype+'_'+args.iptype+f'_noise_{newparams["noiseid"]}_output'
     if ( args.outputdir != None):
         newparams['outputdir'] = args.outputdir
 

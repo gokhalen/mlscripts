@@ -145,8 +145,6 @@ def define_cnn(mltype,iptype,nnodex,nnodey,mubndmin,mubndmax,activation_arg,opti
 
     # Step 3 - Flattening 
     cnn.add(tf.keras.layers.Flatten())
-
-
     
     # Step 4 - Full Connection
     dense_layer_1 = tf.keras.layers.Dense(units=128, activation='relu',
@@ -163,7 +161,6 @@ def define_cnn(mltype,iptype,nnodex,nnodey,mubndmin,mubndmax,activation_arg,opti
     cnn.compile(optimizer = opt, loss = loss[mltype], metrics = metrics[mltype])
 
     return cnn
-
 
 
 def train_cnn(mltype,iptype,cnn,train_data,valid_data,epochs,callback_list):
@@ -348,11 +345,11 @@ def predict_cnn(mltype,iptype,cnn,test_data,nnodex,nnodey):
 
     return out
 
-def save_prediction_test_data(mltype,iptype,noise,prediction,test_data,outputdir):
-    np.save(outputdir+'/'+mltype+'_'+iptype+'_noise_'+noise+'_prediction',prediction)
-    np.save(outputdir+'/'+mltype+'_'+iptype+'_noise_'+noise+'_correct',eval(f'test_data.labels.{mltype}'))
-    np.save(outputdir+'/'+mltype+'_'+iptype+'_noise_'+noise+'_test_images',test_data.images)
-    np.save(outputdir+'/'+mltype+'_'+iptype+'_noise_'+noise+'_test_strain',test_data.strain)
+def save_prediction_test_data(mltype,iptype,noiseid,prediction,test_data,outputdir):
+    np.save(outputdir+'/'+mltype+'_'+iptype+'_noise_'+noiseid+'_prediction',prediction)
+    np.save(outputdir+'/'+mltype+'_'+iptype+'_noise_'+noiseid+'_correct',eval(f'test_data.labels.{mltype}'))
+    np.save(outputdir+'/'+mltype+'_'+iptype+'_noise_'+noiseid+'_test_images',test_data.images)
+    np.save(outputdir+'/'+mltype+'_'+iptype+'_noise_'+noiseid+'_test_strain',test_data.strain)
 
 
 def percentages(ytrue,ypred,percen,ntest,msg,logfile):
@@ -375,11 +372,11 @@ def percentages(ytrue,ypred,percen,ntest,msg,logfile):
             fout.write(outstr+'\n')
         
 
-def post_process_cnn(mltype,iptype,noise,ntrain,nvalid,ntest,prediction,test_data,outputdir,nnodex,nnodey,nimg):
+def post_process_cnn(mltype,iptype,noiseid,ntrain,nvalid,ntest,prediction,test_data,outputdir,nnodex,nnodey,nimg):
     binary_out = None ;    center_out = None;    radius_out = None
     value_out  = None ;    field_out  = None;
 
-    logfile = outputdir+'/'+mltype+'_'+iptype+'_noise_'+str(noise)+'_logfile.txt'
+    logfile = outputdir+'/'+mltype+'_'+iptype+'_noise_'+noiseid+'_logfile.txt'
 
     # need to delete logfile if exists, because we're appending to it
     # if ( os.path.exists(logfile) ):
@@ -582,14 +579,14 @@ def post_process_cnn(mltype,iptype,noise,ntrain,nvalid,ntest,prediction,test_dat
             subplotfields(xx,yy,[mucorr,mupred],[f'mu correct {ifield}',f'mu pred {ifield}'],fname,outputdir=outputdir)
 
         os.chdir(outputdir)
-        os.system(f'ffmpeg.exe -r 4 -i mucomp%0{nzfill}d.png -vcodec mpeg4 -y {mltype}_{iptype}_noise_{noise}_movie.mp4')
-        os.system(f'ffmpeg.exe -r 4 -i mucomp%0{nzfill}d.png -c:v libx264 -crf 0 {mltype}_{iptype}_noise_{noise}_movie_hires.mp4')
+        os.system(f'ffmpeg.exe -r 4 -i mucomp%0{nzfill}d.png -vcodec mpeg4 -y {mltype}_{iptype}_noise_{noiseid}_movie.mp4')
+        os.system(f'ffmpeg.exe -r 4 -i mucomp%0{nzfill}d.png -c:v libx264 -crf 0 {mltype}_{iptype}_noise_{noiseid}_movie_hires.mp4')
         # hi-res: ffmpeg.exe -r 4 -i mucomp%03d.png -c:v libx264 -crf 0 output.mp4
         # source: https://superuser.com/questions/1429256/producing-lossless-video-from-set-of-png-images-using-ffmpeg
 
         # write the scaled norm of the error
         # Even if the user specifies nimg, scaled_norm_error is calculated over all test images
-        scaled_norm_error = np.linalg.norm(test_data.labels.field[:,:,:,1]-prediction)/prediction.shape[0]
+        scaled_norm_error = np.linalg.norm(test_data.labels.field[:,:,:,1]-prediction)/np.sqrt(prediction.shape[0])
         json_out['scaled_norm_error'] = scaled_norm_error
 
         os.chdir('..')
@@ -609,9 +606,9 @@ def post_process_cnn(mltype,iptype,noise,ntrain,nvalid,ntest,prediction,test_dat
 
 
 
-def cnn_summary(cnn,mltype,iptype,noise,outputdir):
+def cnn_summary(cnn,mltype,iptype,noiseid,outputdir):
 #   https://stackoverflow.com/questions/41665799/keras-model-summary-object-to-string
-    summary_filename = mltype+'_'+iptype+'_noise_'+str(noise)+'_summary.txt'
+    summary_filename = mltype+'_'+iptype+'_noise_'+noiseid+'_summary.txt'
     with open(f'{outputdir}/{summary_filename}','w') as fout:
         cnn.summary(print_fn=lambda x:fout.write(x+'\n'))
 

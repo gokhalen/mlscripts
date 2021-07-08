@@ -3,7 +3,7 @@ import json
 import glob
 import os
 import sys
-import copy
+# import copy
 
 from .datastrc import *
 from .plotting import *
@@ -110,6 +110,7 @@ def get_data(ntrain,nvalid,ntest,nnodex,nnodey,noise,noisetype,inputscale,prefix
 
     nsum   = ntrain+nvalid+ntest
 
+    # coord not needed here, but is needed for post processing in mltype=field
     bool_files_exist = (os.path.exists('images.npy') and
                         os.path.exists('strain.npy') and 
                         os.path.exists('binary.npy') and
@@ -122,13 +123,13 @@ def get_data(ntrain,nvalid,ntest,nnodex,nnodey,noise,noisetype,inputscale,prefix
     
     if bool_files_exist :
         print('-'*80,f'\n Loading previously created .npy files directly\n','-'*80,sep='')
-        images = np.load('images.npy')
-        strain = np.load('strain.npy')
-        binary = np.load('binary.npy')
-        center = np.load('center.npy')
-        radius = np.load('radius.npy')
-        value  = np.load('value.npy')
-        field  = np.load('field.npy')
+        print('Loading images ...'); images = np.load('images.npy')
+        print('Loading strain ...'); strain = np.load('strain.npy')
+        print('Loading binary ...'); binary = np.load('binary.npy')
+        print('Loading center ...'); center = np.load('center.npy')
+        print('Loading radius ...'); radius = np.load('radius.npy')
+        print('Loading value ...');  value  = np.load('value.npy')
+        print('Loading field ...');  field  = np.load('field.npy')
 
         assert ( images.shape[0] ==
                  strain.shape[0] ==
@@ -176,7 +177,11 @@ def get_data(ntrain,nvalid,ntest,nnodex,nnodey,noise,noisetype,inputscale,prefix
 
     # first select, then add noise to test examples, then normalize
     full_data  = select_input_comps(data=full_data,iptype=iptype)
-    full_data  = addnoise(data=full_data,noise=noise,noisetype=noisetype,ntrain=ntrain,nvalid=nvalid,ntest=ntest,nnodex=nnodex,nnodey=nnodey)
+    full_data  = addnoise(data=full_data,noise=noise,noisetype=noisetype,
+                          ntrain=ntrain,nvalid=nvalid,ntest=ntest,
+                          nnodex=nnodex,nnodey=nnodey,
+                          outputdir=outputdir
+                          )
     full_data  = normalize_input_cnndata(data=full_data,ntrain=ntrain,nvalid=nvalid,ntest=ntest,inputscale=inputscale)
     
     train_data = split_cnndata(full_data,0,ntrain)
@@ -326,23 +331,42 @@ def inverse_scale_all(datatuple,length,breadth,valmin,valmax,valave):
 
     return tuple(ll)
 
-def addnoise(data,noise,noisetype,ntrain,nvalid,ntest,nnodex,nnodey):
+def addnoise(data,noise,noisetype,ntrain,nvalid,ntest,nnodex,nnodey,outputdir):
     '''
     data is modified in-place and returned
-    noise: is a factor for multiplicative noise or stddev for zero mean normal/gaussian additive noise
+    noise: is a factor for multiplicative noise or SNR for zero mean normal/gaussian additive noise
     '''
     print('-'*80,f'\n Adding noise {noise} of type {noisetype}\n','-'*80,sep='')
     data_list      = [data.strain, data.images]
     data_desc_list = ['strain','images']
+    # this contains strings decribing noise levels
+    noiselist = []
+
     
     for _dd,_desc in zip(data_list,data_desc_list):
+        # number of components in _dd
         ncomps = _dd.shape[-1]
-        for itest in range(ntrain+nvalid,ntrain+nvalid+ntest):
-            for icomp in range(ncomps):
-                clean = _dd[itest,:,:,icomp].copy()
+        # number of signal points
+        NN = _dd.shape[0]*_dd.shape[1]*_dd.shape[2]
+        stddev_ = []
+
+        # compute the stddev of noise for each component of _dd
+        # notice: noise=0 does not make the denominator zero
+        for icomp in range(ncomps):
+            sigma_ = (1.0/(NN**0.5))*np.linalg.norm(_dd[:,:,:,icomp])/(10.0**(noise/20.0))
+            stddev_.append(sigma_)
+
+        for icomp in range(ncomps):
+            for itest in range(ntrain+nvalid,ntrain+nvalid+ntest):
                 
+                clean = _dd[itest,:,:,icomp].copy()
+
+                # in-case noisetype is 'none', this definition will be used in print_and_return
+                noisy = _dd[itest,:,:,icomp]         
+
+                # noise is added only if noisetype is 'add' or 'mult'
                 if ( noisetype=='add'):
-                    noisemaker=np.random.normal(loc=0.0,scale=noise,size=(nnodey,nnodex))
+                    noisemaker=np.random.normal(loc=0.0,scale=stddev_[icomp],size=(nnodey,nnodex))
                     _dd[itest,:,:,icomp] += noisemaker
                     noisy = _dd[itest,:,:,icomp]
                     
@@ -353,17 +377,30 @@ def addnoise(data,noise,noisetype,ntrain,nvalid,ntest,nnodex,nnodey):
                      
                 if (itest == (ntrain+nvalid+ntest-1)):
                     # print noise level in the last image
-                    print_noise(noisy=noisy,clean=clean,data_desc=_desc)
+                    noiselist.append(print_and_return_noise(noisy=noisy,clean=clean,data_desc=_desc))
+
+    os.chdir(outputdir)
+    with open('noise.out','w') as fout:
+        for _string in noiselist:
+            fout.write(_string+'\n')
+
+    os.chdir('..')
 
     return data
 
-def print_noise(noisy,clean,data_desc):
+def print_and_return_noise(noisy,clean,data_desc):
     noisepercen=np.linalg.norm(noisy-clean)/np.linalg.norm(noisy)
-    if noisepercen !=0:
-        snrdb = 20*np.log10(1.0/noisepercen)
-        print(f'In print_noise snr in dB in {data_desc} ==',snrdb)
+    # change this zero comparison to -1e-12 < noisepercen < 1e-12
+    if 0.0 <= noisepercen < 1e-12:
+        outstring = f'In print_noise no noise in {data_desc}'        
     else:
-        print(f'In print_noise no noise in {data_desc}')
+        print('noisepercen=',noisepercen)
+        snrdb = 20*np.log10(1.0/noisepercen)
+        outstring = f'In print_noise snr in dB in {data_desc} == {snrdb}'
+
+    print(outstring)
+
+    return outstring
 
 
 def forward_scale_data(data,length,breadth,valmin,valmax,valave):

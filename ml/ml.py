@@ -45,6 +45,7 @@ if __name__ =='__main__':
     nimg         = newparams['nimg']
     noise        = newparams['noise']
     noisetype    = newparams['noisetype']
+    noiseid      = newparams['noiseid']
     mubndmin     = newparams['muback']
     mubndmax     = newparams['mumax']
     featurescale = newparams['featurescale']
@@ -97,7 +98,7 @@ if __name__ =='__main__':
                                       outputdir=outputdir
                                      )
 
-    cnn_summary(cnn=cnn,mltype=mltype,iptype=iptype,noise=noise,outputdir=outputdir)
+    cnn_summary(cnn=cnn,mltype=mltype,iptype=iptype,noiseid=noiseid,outputdir=outputdir)
     
     prediction_inv = predict_cnn( mltype=mltype,
                                   iptype=iptype,
@@ -114,7 +115,7 @@ if __name__ =='__main__':
 
     save_prediction_test_data( mltype=mltype,
                                iptype=iptype,
-                               noise=str(noise),
+                               noiseid=noiseid,
                                prediction=prediction_inv,
                                test_data=test_data,
                                outputdir=outputdir
@@ -122,7 +123,7 @@ if __name__ =='__main__':
 
     postproc = post_process_cnn( mltype=mltype,
                                  iptype=iptype,
-                                 noise=noise,
+                                 noiseid=noiseid,
                                  ntrain=ntrain,
                                  nvalid=nvalid,
                                  ntest=ntest,
