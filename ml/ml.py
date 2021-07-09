@@ -46,10 +46,14 @@ if __name__ =='__main__':
     noise        = newparams['noise']
     noisetype    = newparams['noisetype']
     noiseid      = newparams['noiseid']
-    mubndmin     = newparams['muback']
-    mubndmax     = newparams['mumax']
+    mubndmin     = newparams['muback'] - 0.5
+    mubndmax     = newparams['mumax']  + 0.5 
     featurescale = newparams['featurescale']
-    inputscale   = newparams['inputscale'] 
+    inputscale   = newparams['inputscale']
+
+    print('-'*80)
+    print('mubndmin and mubndmax modified....')
+    print('-'*80)
 
 
     if ( not os.path.exists(outputdir)):
@@ -78,15 +82,12 @@ if __name__ =='__main__':
         forscale_p1m1(xmin=mubndmin,xmax=mubndmax,data=train_data.labels.field[:,:,:,1])
         forscale_p1m1(xmin=mubndmin,xmax=mubndmax,data=valid_data.labels.field[:,:,:,1])
         forscale_p1m1(xmin=mubndmin,xmax=mubndmax,data=test_data.labels.field[:,:,:,1])
-    
-    train_data_scaled = train_data
-    valid_data_scaled = valid_data
-    test_data_scaled  = test_data
+
 
     cnn = load_or_train_and_plot_cnn( mltype=mltype,
                                       iptype=iptype,
-                                      train_data=train_data_scaled,
-                                      valid_data=valid_data_scaled,
+                                      train_data=train_data,
+                                      valid_data=valid_data,
                                       nnodex=nnodex,
                                       nnodey=nnodey,
                                       mubndmin=mubndmin,
@@ -103,7 +104,7 @@ if __name__ =='__main__':
     prediction_inv = predict_cnn( mltype=mltype,
                                   iptype=iptype,
                                   cnn=cnn,
-                                  test_data=test_data_scaled,
+                                  test_data=test_data,
                                   nnodex=nnodex,
                                   nnodey=nnodey
                                  )
@@ -111,7 +112,7 @@ if __name__ =='__main__':
             
     if ( featurescale == 'True'):
         invscale_p1m1(xmin=mubndmin,xmax=mubndmax,data=prediction_inv)
-        invscale_p1m1(xmin=mubndmin,xmax=mubndmax,data=test_data_scaled.labels.field[:,:,:,1])
+        invscale_p1m1(xmin=mubndmin,xmax=mubndmax,data=test_data.labels.field[:,:,:,1])
 
     save_prediction_test_data( mltype=mltype,
                                iptype=iptype,
@@ -128,7 +129,7 @@ if __name__ =='__main__':
                                  nvalid=nvalid,
                                  ntest=ntest,
                                  prediction=prediction_inv,
-                                 test_data=test_data_scaled,
+                                 test_data=test_data,
                                  outputdir=outputdir,
                                  nnodex=nnodex,
                                  nnodey=nnodey,

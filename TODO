@@ -1,5 +1,5 @@
 -5000) Make mlsetup write out the npy files
--4000) Read only those npy files which are required. e.g. do not read strain.npy if we are not using it.
+-4000) Read only those npy files which are required. e.g. do not read strain.npy if we are not using it. And use mmap_mode to read only the component that is required.
 -3000) All output and input should be in JSON format.
 
 

@@ -63,7 +63,7 @@ def define_cnn(mltype,iptype,nnodex,nnodey,mubndmin,mubndmax,activation_arg,opti
     def sigmoid_symmetric(x):
         return 2.0*(tf.keras.backend.sigmoid(x)-0.5)
 
-    def twisted_tanh(x):
+    def twisted_tanh(x,nnodex=nnodex,nnodey=nnodey):
         return tf.keras.backend.tanh(x) + tf.constant(0.01)*x
     
     # channels is the number of components of input fields
@@ -76,8 +76,7 @@ def define_cnn(mltype,iptype,nnodex,nnodey,mubndmin,mubndmax,activation_arg,opti
                     'strainxx':1,
                     'strainyy':1,
                     'strainxxyy':2
-    }
-    
+                   }
 
     # lookup table to define output layer (units and activation)
     # and loss and other metrics to evaluate
@@ -158,7 +157,13 @@ def define_cnn(mltype,iptype,nnodex,nnodey,mubndmin,mubndmax,activation_arg,opti
 
     opt = tf.keras.optimizers.Adam()
 
-    cnn.compile(optimizer = opt, loss = loss[mltype], metrics = metrics[mltype])
+    # run_eagerly=True added because of Alexander's answer
+    # https://stackoverflow.com/questions/52357542/attributeerror-tensor-object-has-no-attribute-numpy
+    cnn.compile(optimizer=opt,
+                loss=loss[mltype],
+                metrics = metrics[mltype],
+                run_eagerly=True
+                )
 
     return cnn
 
@@ -322,7 +327,7 @@ def predict_cnn(mltype,iptype,cnn,test_data,nnodex,nnodey):
     inputobj = eval(f'test_data.{data_dict[iptype]}')
     ntest    = inputobj.shape[0]
     out      = cnn.predict(inputobj)
-                           
+
     if ( mltype == 'binary'):
         out = out > 0.5
         out = out.reshape((-1,))
@@ -552,8 +557,6 @@ def post_process_cnn(mltype,iptype,noiseid,ntrain,nvalid,ntest,prediction,test_d
 
     if (mltype =='field'):
 
-        minpred = np.min(prediction)
-        print(f'{__file__}: min shear modulus = ',minpred)
 
         coord = np.load('coord.npy')    
         xx    = coord[:,0].reshape(nnodex,nnodey).T
@@ -584,10 +587,17 @@ def post_process_cnn(mltype,iptype,noiseid,ntrain,nvalid,ntest,prediction,test_d
         # hi-res: ffmpeg.exe -r 4 -i mucomp%03d.png -c:v libx264 -crf 0 output.mp4
         # source: https://superuser.com/questions/1429256/producing-lossless-video-from-set-of-png-images-using-ffmpeg
 
-        # write the scaled norm of the error
+        # write the scaled norm of the error, min, max of data
         # Even if the user specifies nimg, scaled_norm_error is calculated over all test images
         scaled_norm_error = np.linalg.norm(test_data.labels.field[:,:,:,1]-prediction)/np.sqrt(prediction.shape[0])
-        json_out['scaled_norm_error'] = scaled_norm_error
+        minpred           = np.min(prediction)
+        maxpred           = np.max(prediction)
+        print(f'{__file__}: min shear modulus = ',minpred)
+        print(f'{__file__}: max shear modulus = ',maxpred)
+        
+        json_out['scaled_norm_error'] = float(scaled_norm_error)
+        json_out['min_shear_mod']     = float(minpred)
+        json_out['max_shear_mod']     = float(maxpred)
 
         os.chdir('..')
         with open(logfile,'w') as fout:
