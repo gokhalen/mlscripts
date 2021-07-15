@@ -84,7 +84,7 @@ def get_args():
                         choices=['add','mult','none']
                         )
                         
-
+    # scaling arguments
 
     parser.add_argument('--featurescale',help='scale or not scale mu field',
                         required=False,type=str,
@@ -100,12 +100,16 @@ def get_args():
                         )
 
 
-    # Add a comment
-    parser.add_argument('--comment',help='a comment that is tagged on to the directory name',
-                        required=False,type=str,
-                        default=''
-                       )
-                        
+    # Add a bounds argument to shift mubndmin and mubndmax when featurescaling is-used
+    parser.add_argument('--boundshift',help='shift mubndmin and mubndmax',
+                        required=False,type=float,
+                        default=0.0
+                        )
+
+    # Comment which is added at the end of outputdir
+    parser.add_argument('--comment',help='comment added at the end of outputdir',
+                        required=False,type=str,default='nocomm'
+                        )
 
     
     args = parser.parse_args()
@@ -148,6 +152,8 @@ def update_params(params,args):
     newparams['noisetype']     = args.noisetype
     newparams['featurescale']  = args.featurescale
     newparams['inputscale']    = args.inputscale
+    newparams['mubndmin']      = newparams['muback'] - args.boundshift
+    newparams['mubndmax']      = newparams['mumax']  + args.boundshift
 
     # create noiseid
     if (args.noisetype == 'add'):
@@ -161,7 +167,8 @@ def update_params(params,args):
     if ( args.nimg > newparams['ntest']):
         print(f'{__file__}: nimg > ntest ...setting nimg to ntest')  # the setting is done a few lines above
 
-    newparams['outputdir'] = args.mltype+'_'+args.iptype+f'_noise_{newparams["noiseid"]}_output'
+    newparams['outputdir'] = args.mltype+'_'+args.iptype+f'_noise_{newparams["noiseid"]}_' + args.activation + '_' + f'bndshift_{args.boundshift}'+'_'+args.comment + '_output'
+    
     if ( args.outputdir != None):
         newparams['outputdir'] = args.outputdir
 

@@ -46,13 +46,13 @@ if __name__ =='__main__':
     noise        = newparams['noise']
     noisetype    = newparams['noisetype']
     noiseid      = newparams['noiseid']
-    mubndmin     = newparams['muback'] - 0.5
-    mubndmax     = newparams['mumax']  + 0.5 
+    mubndmin     = newparams['mubndmin']
+    mubndmax     = newparams['mubndmax'] 
     featurescale = newparams['featurescale']
     inputscale   = newparams['inputscale']
 
     print('-'*80)
-    print('mubndmin and mubndmax modified....')
+    print(f'{mubndmin=} and {mubndmax=}')
     print('-'*80)
 
 

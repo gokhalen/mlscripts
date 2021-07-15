@@ -592,11 +592,15 @@ def post_process_cnn(mltype,iptype,noiseid,ntrain,nvalid,ntest,prediction,test_d
         scaled_norm_error = np.linalg.norm(test_data.labels.field[:,:,:,1]-prediction)/np.sqrt(prediction.shape[0])
         minpred           = np.min(prediction)
         maxpred           = np.max(prediction)
+        minidx            = np.unravel_index(prediction.argmin(),prediction.shape)
+        maxidx            = np.unravel_index(prediction.argmax(),prediction.shape)
         print(f'{__file__}: min shear modulus = ',minpred)
         print(f'{__file__}: max shear modulus = ',maxpred)
         
         json_out['scaled_norm_error'] = float(scaled_norm_error)
         json_out['min_shear_mod']     = float(minpred)
+        json_out['min_indices']       = [int(_i) for _i in minidx]
+        json_out['max_indices']       = [int(_i) for _i in maxidx]
         json_out['max_shear_mod']     = float(maxpred)
 
         os.chdir('..')
