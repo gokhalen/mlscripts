@@ -59,6 +59,12 @@ if __name__ =='__main__':
     if ( not os.path.exists(outputdir)):
         os.mkdir(outputdir)
 
+    # clean directory
+    os.system(f'rm {outputdir}/mucomp*.png')
+    os.system('rm filter*.png')
+    os.system(f'rm {outputdir}/*.mp4')
+
+
     # this data is not scaled
     train_data,valid_data,test_data = get_data( ntrain=ntrain,
                                                 nvalid=nvalid,
@@ -100,6 +106,7 @@ if __name__ =='__main__':
                                      )
 
     cnn_summary(cnn=cnn,mltype=mltype,iptype=iptype,noiseid=noiseid,outputdir=outputdir)
+    cnn_vis_conv_filters(cnn=cnn,mltype=mltype,iptype=iptype,noiseid=noiseid,outputdir=outputdir)
     
     prediction_inv = predict_cnn( mltype=mltype,
                                   iptype=iptype,

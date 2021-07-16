@@ -279,16 +279,16 @@ def read_data(start,stop,prefix,nnodex,nnodey,strtype,outputdir):
             field_label[iloc,:,:,0] = lam
             field_label[iloc,:,:,1] = mu
 
-        plotfield(xx,yy,images[iloc,:,:,0],'ux',outsolx,outputdir=prefix+str(ii))
-        plotfield(xx,yy,images[iloc,:,:,1],'uy',outsoly,outputdir=prefix+str(ii))
+        plotfield(xx,yy,images[iloc,:,:,0],'ux',fname=outsolx,outputdir=prefix+str(ii))
+        plotfield(xx,yy,images[iloc,:,:,1],'uy',fname=outsoly,outputdir=prefix+str(ii))
         
-        plotfield(xx,yy,field_label[iloc,:,:,0],'lam',outlam,outputdir=prefix+str(ii))
-        plotfield(xx,yy,field_label[iloc,:,:,1],'mu',outmu,outputdir=prefix+str(ii))
+        plotfield(xx,yy,field_label[iloc,:,:,0],'lam',fname=outlam,outputdir=prefix+str(ii))
+        plotfield(xx,yy,field_label[iloc,:,:,1],'mu',fname=outmu,outputdir=prefix+str(ii))
 
         # plot strains
-        plotfield(xx,yy,strain[iloc,:,:,0],'exx',outexx,outputdir=prefix+str(ii))
-        plotfield(xx,yy,strain[iloc,:,:,1],'eyy',outeyy,outputdir=prefix+str(ii))
-        plotfield(xx,yy,strain[iloc,:,:,2],'exy',outexy,outputdir=prefix+str(ii))
+        plotfield(xx,yy,strain[iloc,:,:,0],'exx',fname=outexx,outputdir=prefix+str(ii))
+        plotfield(xx,yy,strain[iloc,:,:,1],'eyy',fname=outeyy,outputdir=prefix+str(ii))
+        plotfield(xx,yy,strain[iloc,:,:,2],'exy',fname=outexy,outputdir=prefix+str(ii))
 
     listbin = list(binary_label)
     _h      = listbin.count(0)

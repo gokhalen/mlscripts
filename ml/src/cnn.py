@@ -10,7 +10,7 @@ import json
 
 from sklearn.metrics import confusion_matrix, accuracy_score
 from .datastrc import *
-from .plotting import plotall_and_save,plotcurves,plotfield,subplotfields
+from .plotting import plotall_and_save,plotcurves,plotfield,subplotfields,plotfilter
 from .data import select_input_comps
 
 # Custom activation function
@@ -569,8 +569,6 @@ def post_process_cnn(mltype,iptype,noiseid,ntrain,nvalid,ntest,prediction,test_d
         json_out = {}
  
         # nimg = test_data.labels.field.shape[0]
-        os.system(f'rm {outputdir}/mucomp*.png')
-        os.system(f'rm {outputdir}/*.mp4')
         for ifield in range(nimg):
             print(f'plotting test example {ifield+1} out of {nimg}')
             mucorr = test_data.labels.field[ifield,:,:,1]
@@ -628,4 +626,44 @@ def cnn_summary(cnn,mltype,iptype,noiseid,outputdir):
 
     cnn.summary()
 
+
+def cnn_vis_conv_filters(*,cnn,mltype,iptype,noiseid,outputdir):
+# save pngs of the filters of the first convolutional layer
+# https://machinelearningmastery.com/how-to-visualize-filters-and-feature-maps-in-convolutional-neural-networks/    
+    for ilayer,layer in enumerate(cnn.layers):
+        if 'conv' not in layer.name:
+            continue
+        else:
+            if ( ilayer == 0):
+                _allfilters,_biases = layer.get_weights()
+                # row direction of the filter is the physical y-axis
+                
+                nfilters  = _allfilters.shape[-1]
+                nchannels = _allfilters.shape[-2]
+                nrows     = _allfilters.shape[0]
+                ncols     = _allfilters.shape[1]
+
+                cmin  = np.min(_allfilters)
+                cmax  = np.max(_allfilters)
+
+                # if we have ncols entries, we need ncols+1 grid points
+                xvec = np.linspace(0,ncols,ncols+1)
+                yvec = np.linspace(0,nrows,nrows+1)
+
+                xx,yy = np.meshgrid(xvec,yvec)
+
+                for ifilt in range(nfilters):
+                    for ichan in range(nchannels):
+                        fname = f'filter_{ifilt}_channel_{ichan}.png'
+                        print(f'plotting {ifilt+1} of {nfilters} nfilters, channel {ichan+1} of {nchannels} channels')
+                        
+                        plotfilter(xx=xx,yy=yy,
+                                   field=_allfilters[:,:,ichan,ifilt],
+                                   title='',
+                                   cmin=cmin,cmax=cmax,
+                                   xlabel='columns',ylabel='rows',
+                                   shading='flat',
+                                   fname=fname,
+                                   outputdir=outputdir
+                                  )
 # ----------------------------------------------------------------------------------------

@@ -2,6 +2,7 @@ import matplotlib as mpl
 # https://stackoverflow.com/questions/45993879/matplot-lib-fatal-io-error-25-inappropriate-ioctl-for-device-on-x-server-loc See nanounanue's answer
 mpl.use('Agg')
 import matplotlib.pyplot as plt
+import matplotlib.ticker as ticker
 import numpy as np
 import os
 
@@ -72,17 +73,24 @@ def plotcurves(xdata,ydata,xlabel,ylabel,title,outputdir,legend=None,fname=None,
     if (fname is not None):
         plt.savefig(outputdir+'/'+fname,bbox_inches='tight')  
 
-def plotfield(xx,yy,field,title,fname,outputdir):
+def plotfield(xx,yy,field,title,xticks=None,yticks=None,cmin=None,cmax=None,shading='auto',fname='out.png',outputdir='.'):
+
+    if (cmin==None):   cmin = np.min(field)
+    if (cmax==None):   cmax = np.max(field)
     
     plt.figure(title)
-    plt.pcolormesh(xx,yy,field)
+    plt.pcolormesh(xx,yy,field,shading=shading)
     plt.title(title)
     plt.colorbar()
+    plt.clim([cmin,cmax])
     ax = plt.gca()
+    
+    if xticks != None:  plt.xticks(xticks)
+    if yticks != None:  plt.yticks(yticks)
+    
     ax.set_aspect('equal')
     plt.savefig(outputdir+'/'+fname,bbox_inches='tight')
     plt.close()
-
 
 def subplotfields(xx,yy,fields,titles,fname,outputdir):
     # fields and titles are iterables
@@ -98,7 +106,7 @@ def subplotfields(xx,yy,fields,titles,fname,outputdir):
     cmin = np.min(np.asarray(fields))
     
     plt.figure()
-    
+
     for it in range(nt):
         plt.subplot(1,nt,it+1)
         plt.pcolormesh(xx,yy,fields[it])
@@ -117,3 +125,44 @@ def subplotfields(xx,yy,fields,titles,fname,outputdir):
     plt.savefig(outputdir+'/'+fname,bbox_inches='tight')
     plt.close()
 
+def plotfilter(xx,yy,field,title,cmin=None,cmax=None,xlabel=None,ylabel=None,shading='flat',fname='out.png',outputdir='.'):
+    
+# https://stackoverflow.com/questions/17158382/centering-x-tick-labels-between-tick-marks-in-matplotlib
+# this plots the 'element number' on the x and y axis
+# this has been specifically designed to work with matplotlib 3.1.2
+# for this to work xx,yy should contain one more row and column than field
+# https://matplotlib.org/3.1.1/api/_as_gen/matplotlib.pyplot.pcolormesh.html    
+
+    fontsize=18
+    if (cmin==None):   cmin = np.min(field)
+    if (cmax==None):   cmax = np.max(field)
+    
+    plt.figure(title)
+    plt.pcolormesh(xx,yy,field,shading=shading)
+    plt.title(title)
+    plt.colorbar()
+    plt.clim([cmin,cmax])
+    ax = plt.gca()
+
+    nrows = xx.shape[0]
+    ncols = xx.shape[1]
+
+    # set tick locations and then labels for those locations
+    xticksloc = [ 0.5*(xx[0,_i]+xx[0,_i+1]) for _i in range(ncols-1)]
+    yticksloc = [ 0.5*(yy[_i,0]+yy[_i+1,0]) for _i in range(nrows-1)]
+    xticks    = [ int(_f+0.5) for _f in xticksloc]
+    yticks    = [ int(_f+0.5) for _f in yticksloc]
+    
+    ax.xaxis.set_major_locator(ticker.FixedLocator(xticksloc))
+    ax.xaxis.set_major_formatter(ticker.FixedFormatter(xticks))
+
+    ax.yaxis.set_major_locator(ticker.FixedLocator(yticksloc))
+    ax.yaxis.set_major_formatter(ticker.FixedFormatter(yticks))
+
+    if ( xlabel != None ): plt.xlabel(xlabel,fontsize=fontsize)
+    if ( ylabel != None ): plt.ylabel(ylabel,fontsize=fontsize)
+  
+    ax.set_aspect('equal')
+
+    plt.savefig(outputdir+'/'+fname,bbox_inches='tight')
+    plt.close()
