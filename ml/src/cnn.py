@@ -590,6 +590,18 @@ def post_process_cnn(mltype,iptype,noiseid,ntrain,nvalid,ntest,prediction,test_d
         
         rms_error    = np.linalg.norm(test_data.labels.field[:,:,:,1]-prediction)/np.sqrt(prediction.shape[0])
         scaled_error = np.linalg.norm(test_data.labels.field[:,:,:,1]-prediction)/np.linalg.norm(test_data.labels.field[:,:,:,1])
+
+        scaled_error_array = np.zeros(prediction.shape[0],dtype='float64')
+        
+        for _idx in range(prediction.shape[0]):
+            scaled_error_array[_idx] = np.linalg.norm(test_data.labels.field[_idx,:,:,1]-prediction[_idx,:,:])
+            scaled_error_array[_idx] = scaled_error_array[_idx]/np.linalg.norm(test_data.labels.field[_idx,:,:,1])
+
+        # numpy arrays give trouble while serializing with json
+        scaled_error_list = scaled_error_array.tolist()
+
+        # from low to high i.e. from good to bad
+        sorted_idx_list = np.argsort(scaled_error_array).tolist()
         
         minpred      = np.min(prediction)
         maxpred      = np.max(prediction)
@@ -599,16 +611,18 @@ def post_process_cnn(mltype,iptype,noiseid,ntrain,nvalid,ntest,prediction,test_d
         print(f'{__file__}: min shear modulus = ',minpred)
         print(f'{__file__}: max shear modulus = ',maxpred)
         
-        json_out['rms_error']      = float(rms_error)
-        json_out['scaled_error']   = float(scaled_error)
-        json_out['min_shear_mod']  = float(minpred)
-        json_out['min_indices']    = [int(_i) for _i in minidx]
-        json_out['max_indices']    = [int(_i) for _i in maxidx]
-        json_out['max_shear_mod']  = float(maxpred)
+        json_out['rms_error']         = float(rms_error)
+        json_out['scaled_error']      = float(scaled_error)
+        json_out['min_shear_mod']     = float(minpred)
+        json_out['min_indices']       = [int(_i) for _i in minidx]
+        json_out['max_indices']       = [int(_i) for _i in maxidx]
+        json_out['max_shear_mod']     = float(maxpred)
+        json_out['sorted_idx_list']   = sorted_idx_list
+        json_out['scaled_error_list'] = scaled_error_list
 
         os.chdir('..')
         with open(logfile,'w') as fout:
-            json.dump(json_out,fout)
+            json.dump(json_out,fout,indent=4)
             
     # this isn't really necessary, we're not doing anything with the
     # output of this post_process_cnn
@@ -641,6 +655,9 @@ def cnn_vis_conv_filters(*,cnn,mltype,iptype,noiseid,outputdir):
         else:
             if ( ilayer == 0):
                 _allfilters,_biases = layer.get_weights()
+
+                np.save(outputdir+'/filter_layer_1',_allfilters)
+                
                 # row direction of the filter is the physical y-axis
                 
                 nfilters  = _allfilters.shape[-1]
