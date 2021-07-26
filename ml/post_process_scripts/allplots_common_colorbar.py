@@ -66,7 +66,10 @@ nnodey    = 97
 # best,worst,and another two
 # munumbers = [17,724,122,269]  # for CNN1
 # munumbers = [389,320,122,269] # for CNN2
-munumbers = [389,320,122,269]
+# munumbers = [388,246,507,198,485,3,482,628]  # for CNN1 Apppendix   
+# munumbers = [388,686,698,65,410,92,258,685]  # for CNN2 Appendix
+
+munumbers = [388,246,507,198,485,3,482,628] 
 
 numexamp  = len(munumbers)
 
@@ -77,16 +80,16 @@ yy     = coord[:,1].reshape(nnodex,nnodey).T
 
 true       = np.load('correct_strainyy.npy')
 true       = true[...,1]
-prediction = np.load('prediction_imagesy.npy')
+prediction = np.load('prediction_strainyy.npy')
 mufields   = [true,prediction]
 
 
 for ictr,ifield in enumerate(munumbers):
     print(f'Processing example {ictr+1} of {numexamp}')
-    dirname = f'ex{ictr+1}'
+    dirname = f'app1/ex{ictr+1}'
     # make directory if it does not exist
     if (not os.path.exists(dirname)):
-        os.mkdir(dirname)
+        os.makedirs(dirname)
 
     # combine arrays to find min and max for each ifield
     _true   = true[ifield,:,:]
