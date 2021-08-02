@@ -17,7 +17,7 @@ from fypy.src.libmesh import FyPyMesh
 '''
 Nachiket Gokhale gokhalen@gmail.com
 
-This script generates training, validation and testing examples for EL ML.
+This script generates training, validation and testing examples for EI ML.
 This works as follows
 
 1. Getting arguments: `getargs` is called to get arguments (the object `args`)
