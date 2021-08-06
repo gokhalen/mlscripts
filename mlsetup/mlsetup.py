@@ -193,7 +193,7 @@ def generate_random(args):
     dd['breadth'] = args.breadth
     dd['nelemx']  = args.nelemx
     dd['nelemy']  = args.nelemy
-    dd['stftype'] = 'inclusion'
+    dd['stftype'] = 'cross'
     dd['bctype']  = 'trac'
     dd['bcmag']   = -0.06
     rmin,rmax     = get_rmin_rmax(args)

@@ -52,8 +52,14 @@ def plotall_and_save(mltype,iptype,activation,history,outputdir):
             
         plt.grid(True,which='both',linewidth='2')
         plt.xticks(fontsize=fontsize)
-        plt.yticks(fontsize=fontsize)
-        plt.tick_params(axis='both', which='minor', labelsize=minorticksize)
+
+        _ymax    = np.max(data)
+        _ymin    = np.min(data)
+        yticks   = np.linspace(_ymin,_ymax,5) 
+        
+        # plt.yticks(ticks=yticks,labels=['a','b','c','d','e'],fontsize=fontsize)
+        plt.yticks(fontsize=fontsize)        
+        plt.tick_params(axis='both', which='both', labelsize=minorticksize)
         plt.tight_layout()
         plt.savefig(f'{outputdir}/{file_title}'+'_plot_'+ikey+'.png',bbox_inches='tight')
         np.save(arr=data,file=f'{outputdir}/{file_title}'+'_plot_'+ikey)
