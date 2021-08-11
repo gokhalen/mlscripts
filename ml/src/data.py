@@ -183,7 +183,7 @@ def get_data(ntrain,nvalid,ntest,nnodex,nnodey,noise,noisetype,inputscale,prefix
                           outputdir=outputdir
                           )
     full_data  = normalize_input_cnndata(data=full_data,ntrain=ntrain,nvalid=nvalid,ntest=ntest,inputscale=inputscale)
-    
+
     train_data = split_cnndata(full_data,0,ntrain)
     valid_data = split_cnndata(full_data,ntrain,ntrain+nvalid)
     test_data  = split_cnndata(full_data,ntrain+nvalid,nsum)
