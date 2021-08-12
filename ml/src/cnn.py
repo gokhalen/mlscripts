@@ -208,7 +208,7 @@ def train_cnn(mltype,iptype,cnn,train_data,valid_data,epochs,callback_list):
                          epochs    = epochs,
                          callbacks = callback_list
                        )
-        
+
     return (cnn,history)
 
 def load_or_train_and_plot_cnn(mltype,iptype,train_data,valid_data,nnodex,nnodey,mubndmin,mubndmax,epochs,activation,optimizer,mode,outputdir):

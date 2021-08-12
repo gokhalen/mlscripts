@@ -89,6 +89,7 @@ if __name__ =='__main__':
         forscale_p1m1(xmin=mubndmin,xmax=mubndmax,data=valid_data.labels.field[:,:,:,1])
         forscale_p1m1(xmin=mubndmin,xmax=mubndmax,data=test_data.labels.field[:,:,:,1])
 
+
     cnn = load_or_train_and_plot_cnn( mltype=mltype,
                                       iptype=iptype,
                                       train_data=train_data,
