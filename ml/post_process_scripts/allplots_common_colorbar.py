@@ -13,6 +13,7 @@ import matplotlib as mpl
 # mpl.use('Agg')
 import matplotlib.pyplot as plt
 import matplotlib.cm as cm
+import json
 from matplotlib.colors import Normalize
 
 import os
@@ -48,11 +49,12 @@ def subplotfields(xx,yy,fields,titles,cmin,cmax,fname,outputdir):
                        labelbottom=False,
                        labelleft=False
                        )
-        ax.set_title(titles[it])               
+        ax.set_title(titles[it],fontsize=16)               
     
     yticks        = np.linspace(cmin,cmax,5) 
     ytick_labels  = np.round(yticks,decimals=1)
     cbar=fig.colorbar(im, ax=axes.ravel().tolist(),shrink=0.59,pad=0.02)
+    cbar.ax.tick_params(labelsize=16)
     cbar.set_ticks(yticks)
     cbar.set_ticklabels(ytick_labels)    
     plt.show()
@@ -64,29 +66,53 @@ nnodex    = 65
 nnodey    = 97
 # for single inclusion problem
 # best,worst,and another two
-# munumbers = [17,724,122,269]  # for CNN1
-# munumbers = [389,320,122,269] # for CNN2
-# munumbers = [388,246,507,198,485,3,482,628]  # for CNN1 Apppendix   
-# munumbers = [388,686,698,65,410,92,258,685]  # for CNN2 Appendix
 
-munumbers = [388,246,507,198,485,3,482,628] 
+# ALL MU NUMBERS ARE DIRECT ENTRIES INTO THE PREDICTION ARRAY
+# FIRST 4 NUMBERS ARE MAIN ENTRIES NEXT 8 ARE APPENDIX ENTRIES
+# OF WHICH THE LAST TWO ARE USED
+# CNN1
+# munumbers = [1517,1935,521,1087,1381,625,1366,852,719,1813,72,1912] 
+# CNN1 errors [0.0705,0.476,0.0298,0.247,0.0838,0.137,0.168,0.185,0.205,0.222
+#                       0.243,0.264]
 
-numexamp  = len(munumbers)
+# CNN2
+# munumbers = [1517,1935,521,1087,43,1495,120,1552,1204,1828,721,180]
+# CNN2 errors [0.157,0.03976,0.327,0.346,0.156,0.205,0.227,0.247,
+#                       0.265,0.283,0.312,0.359]  
+#                        
+
+# CNN3 
+# munumbers = [1517,1935,521,1087,967,615,1008,14,147,1657,702,1126]
+# Appendix CNN3 Errors = [0.0754,0.131,0.161,0.181,0.199,0.223,0.249,0.305]
+# sorted numbers - 9,253,500,757,1001,1257,1507,1848
+
 
 # load data
+# this index controls which data is loaded CNN1/CNN2/CNN3
+
+cnnidx = 3
+munumbers = [1517,1935,521,1087,967,615,1008,14,147,1657,702,1126]
+numexamp  = len(munumbers)
+
 coord  = np.load('coord.npy')    
 xx     = coord[:,0].reshape(nnodex,nnodey).T
 yy     = coord[:,1].reshape(nnodex,nnodey).T
 
-true       = np.load('correct_strainyy.npy')
+true       = np.load('correct.npy')
 true       = true[...,1]
-prediction = np.load('prediction_strainyy.npy')
+prediction = np.load(f'predictioncnn{cnnidx}.npy')
 mufields   = [true,prediction]
 
+with open(f'logcnn{cnnidx}.txt') as fin:
+    logdict = json.load(fin)
+
+scaled_error_list = logdict['scaled_error_list']
+sorted_idx_list   = logdict['sorted_idx_list']
 
 for ictr,ifield in enumerate(munumbers):
-    print(f'Processing example {ictr+1} of {numexamp}')
-    dirname = f'app1/ex{ictr+1}'
+    sc_error = scaled_error_list[ifield]
+    print(f'Processing example {ictr+1} of {numexamp}...scaled_error is {sc_error}')
+    dirname = f'app{cnnidx}/ex{ictr+1}'
     # make directory if it does not exist
     if (not os.path.exists(dirname)):
         os.makedirs(dirname)

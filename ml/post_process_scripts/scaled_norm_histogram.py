@@ -10,10 +10,11 @@ import json
 import matplotlib.pyplot as plt
 import matplotlib.ticker as ticker
 
-binwidth = 0.025
-fontsize = 14
+binwidth  = 0.025
+fontsize  = 22
+labelsize = 16
 
-with open('logcnn1.txt','rt') as fin:
+with open('logcnn3.txt','rt') as fin:
     dd=json.load(fin)
     
 scaled_error_array = np.asarray(dd['scaled_error_list'])
@@ -40,7 +41,7 @@ newbins  = np.linspace(leftval,rightval,rightn-leftn+1,endpoint=True)
 
 
 for ictr in range(2):
-    fig = plt.figure(figsize=(5,4))
+    fig = plt.figure(figsize=(7,4))
     ax  = fig.gca()
     
     if ictr==0: 
@@ -55,10 +56,10 @@ for ictr in range(2):
     values2,bin2,artists2=plt.hist(scaled_error_array,cumulative=cumbool,
                                    bins=newbins,weights=weights)
     plt.grid(True,which='both')
-    plt.xlabel('scaled error',fontsize=fontsize)
-    plt.ylabel('fraction of examples',fontsize=fontsize)
+    plt.xlabel('scaled error',fontsize=fontsize,labelpad=12)
+    plt.ylabel('fraction of examples',fontsize=fontsize,labelpad=4)
     plt.title(plt_title,fontsize=fontsize)
-    plt.tight_layout()
+    plt.tick_params(labelsize=labelsize)
     
     xaxis_ticks = newbins[0::]
     major_xtick_label = [str(num)[0:5].rstrip('0') for num in xaxis_ticks]
@@ -66,10 +67,12 @@ for ictr in range(2):
     # replace every alternate label with ''
     major_xtick_label[1::2]=major_replace[1::2]
     
+    # for CNN2 replace additional entries
+    major_xtick_label[2::4]=['']*4
+    
     ax.xaxis.set_major_locator(ticker.FixedLocator(xaxis_ticks))
     ax.xaxis.set_major_formatter(ticker.FixedFormatter(major_xtick_label))
     
     plt.tight_layout()
-    
     plt.savefig(plt_save,bbox_inches='tight') 
 
