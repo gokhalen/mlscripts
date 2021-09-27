@@ -109,7 +109,10 @@ if __name__ =='__main__':
                                      )
 
     cnn_summary(cnn=cnn,mltype=mltype,iptype=iptype,noiseid=noiseid,outputdir=outputdir)
-    cnn_vis_conv_filters(cnn=cnn,mltype=mltype,iptype=iptype,noiseid=noiseid,outputdir=outputdir)
+    # cnn_vis_conv_filters(cnn=cnn,mltype=mltype,iptype=iptype,noiseid=noiseid,outputdir=outputdir)
+
+
+    evaluate_losses(mltype,iptype,cnn,train_data,valid_data,test_data)
     
     prediction_inv = predict_cnn( mltype=mltype,
                                   iptype=iptype,

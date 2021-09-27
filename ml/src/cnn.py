@@ -313,6 +313,29 @@ def load_or_train_and_plot_cnn(mltype,iptype,train_data,valid_data,nnodex,nnodey
     return cnn
 
 
+def evaluate_losses(mltype,iptype,cnn,train_data,valid_data,test_data):
+    data_dict = {'images':'images',
+                 'imagesx':'images',
+                 'imagesy':'images',
+                 'strain':'strain',
+                 'strainxx':'strain',
+                 'strainyy':'strain',
+                 'strainxxyy':'strain'
+                }
+    evallist   = [train_data,valid_data,test_data]
+    evalstring = ['train_data','valid_data','test_data']
+
+    for _name,_data in zip(evalstring,evallist):
+        inputobj = eval(f'_data.{data_dict[iptype]}')
+        nexamples = inputobj.shape[0]
+        print('-'*80)
+        print(f'Loss for {_name} =')
+        result = cnn.evaluate(x=inputobj,y=_data.labels.field[...,1].reshape((nexamples,-1)))
+        print(_name)
+        print('-'*80)
+
+    pass
+
 def predict_cnn(mltype,iptype,cnn,test_data,nnodex,nnodey):
     # depending on the iptype we are choosing the data to be 'images' or 'strain'
     data_dict = {'images':'images',
@@ -343,10 +366,10 @@ def predict_cnn(mltype,iptype,cnn,test_data,nnodex,nnodey):
 
     if ( mltype == 'field'):
         out    = out.reshape((-1,nnodey,nnodex))
-        print('-'*80)
-        print('Test set loss = ')
-        result = cnn.evaluate(x=inputobj,y=test_data.labels.field[...,1].reshape((ntest,-1)))
-        print('-'*80)
+        #print('-'*80)
+        #print('Test set loss = ')
+        #result = cnn.evaluate(x=inputobj,y=test_data.labels.field[...,1].reshape((ntest,-1)))
+        #print('-'*80)
 
     return out
 
